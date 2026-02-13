@@ -55,6 +55,17 @@ interface Automation {
   enabled: boolean
 }
 
+interface Idea {
+  id: string
+  title: string
+  description: string
+  category: string
+  status: string
+  priority: string
+  source: string
+  created_at: string
+}
+
 // Static data for cron schedule and pipeline (will be dynamic later)
 const cronSchedule = [
   { day: "Mon", jobs: ["6am Morning Sync", "10:30am Monday Mindset"] },
@@ -87,6 +98,7 @@ export default function MissionControl() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [automations, setAutomations] = useState<Automation[]>([])
+  const [ideas, setIdeas] = useState<Idea[]>([])
 
   // Fetch data from Supabase
   const fetchData = async () => {
@@ -111,9 +123,16 @@ export default function MissionControl() {
         .select('*')
         .order('name')
       
+      // Fetch ideas
+      const { data: ideasData } = await supabase
+        .from('ideas')
+        .select('*')
+        .order('priority', { ascending: true })
+      
       if (tasksData) setTasks(tasksData)
       if (activitiesData) setActivities(activitiesData)
       if (automationsData) setAutomations(automationsData)
+      if (ideasData) setIdeas(ideasData)
       
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -234,6 +253,14 @@ export default function MissionControl() {
               </TabsTrigger>
               <TabsTrigger value="activity" className="data-[state=active]:bg-zinc-800">
                 📜 Activity Feed
+              </TabsTrigger>
+              <TabsTrigger value="ideas" className="data-[state=active]:bg-zinc-800">
+                💡 Ideas Backlog
+                {ideas.length > 0 && (
+                  <Badge className="ml-2 bg-violet-500/20 text-violet-400 border-violet-500/30">
+                    {ideas.length}
+                  </Badge>
+                )}
               </TabsTrigger>
             </TabsList>
 
@@ -515,6 +542,94 @@ export default function MissionControl() {
                   </ScrollArea>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Tab 5: Ideas Backlog */}
+            <TabsContent value="ideas" className="space-y-6">
+              {/* Priority Groups */}
+              {['high', 'medium', 'low'].map((priority) => {
+                const priorityIdeas = ideas.filter(i => i.priority === priority)
+                if (priorityIdeas.length === 0) return null
+                return (
+                  <Card key={priority} className="bg-zinc-900 border-zinc-800">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        {priority === 'high' && '🔥'}
+                        {priority === 'medium' && '📌'}
+                        {priority === 'low' && '💭'}
+                        {priority.charAt(0).toUpperCase() + priority.slice(1)} Priority
+                        <Badge variant="outline" className="ml-2 border-zinc-700 text-zinc-500">
+                          {priorityIdeas.length}
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {priorityIdeas.map((idea) => (
+                          <div key={idea.id} className="flex items-start justify-between p-4 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors">
+                            <div className="flex-1">
+                              <div className="font-medium text-zinc-200 mb-1">{idea.title}</div>
+                              <div className="text-sm text-zinc-400">{idea.description}</div>
+                            </div>
+                            <div className="flex items-center gap-2 ml-4">
+                              <Badge variant="outline" className={
+                                idea.status === 'in_progress'
+                                  ? "border-cyan-500/30 text-cyan-400"
+                                  : idea.status === 'planned'
+                                  ? "border-amber-500/30 text-amber-400"
+                                  : "border-zinc-700 text-zinc-500"
+                              }>
+                                {idea.status}
+                              </Badge>
+                              {idea.category && (
+                                <Badge variant="outline" className="border-violet-500/30 text-violet-400">
+                                  {idea.category}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+              
+              {ideas.length === 0 && (
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardContent className="p-12 text-center">
+                    <p className="text-zinc-500">No ideas in the backlog yet.</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Summary Stats */}
+              <div className="grid grid-cols-4 gap-4">
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-white mb-1">{ideas.length}</div>
+                    <div className="text-xs text-zinc-500">Total Ideas</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-red-950/30 border-red-800/30">
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-red-400 mb-1">{ideas.filter(i => i.priority === 'high').length}</div>
+                    <div className="text-xs text-red-300/70">High Priority</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-cyan-950/30 border-cyan-800/30">
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-cyan-400 mb-1">{ideas.filter(i => i.status === 'in_progress').length}</div>
+                    <div className="text-xs text-cyan-300/70">In Progress</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-amber-950/30 border-amber-800/30">
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-amber-400 mb-1">{ideas.filter(i => i.status === 'planned').length}</div>
+                    <div className="text-xs text-amber-300/70">Planned</div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
         )}
