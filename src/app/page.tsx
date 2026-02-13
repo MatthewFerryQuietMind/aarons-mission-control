@@ -34,6 +34,11 @@ interface Task {
   assigned_to: string
   due_date: string | null
   created_at: string
+  metadata?: {
+    link?: string
+    action_type?: string
+    post_content?: string
+  }
 }
 
 interface ActivityItem {
@@ -288,7 +293,15 @@ export default function MissionControl() {
                           }>
                             {item.due_date ? formatDate(item.due_date) : item.priority}
                           </Badge>
-                          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                          <Button 
+                            size="sm" 
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => {
+                              if (item.metadata?.link) {
+                                window.open(item.metadata.link, '_blank')
+                              }
+                            }}
+                          >
                             View
                             <ArrowRight className="w-4 h-4 ml-2" />
                           </Button>
