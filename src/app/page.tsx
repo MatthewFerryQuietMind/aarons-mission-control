@@ -21,7 +21,12 @@ import {
   Zap,
   ArrowRight,
   RefreshCw,
-  Loader2
+  Loader2,
+  Target,
+  Brain,
+  RotateCcw,
+  Lightbulb,
+  FileText
 } from 'lucide-react'
 
 // Types
@@ -71,28 +76,68 @@ interface Idea {
   created_at: string
 }
 
-// Static data for cron schedule and pipeline (will be dynamic later)
-const cronSchedule = [
-  { day: "Mon", jobs: ["6am Morning Sync", "10:30am Monday Mindset"] },
-  { day: "Tue", jobs: ["Email Triage (3x)", "11am Rapid Rapport"] },
-  { day: "Wed", jobs: ["Email Triage (3x)", "11am Rapid Rapport", "1:30pm MJM Mastermind", "5pm Lead Conversion"] },
-  { day: "Thu", jobs: ["Email Triage (3x)", "11am Rapid Rapport", "1pm Open Door", "4:30pm NLP Boot Camp"] },
-  { day: "Fri", jobs: ["Email Triage (3x)", "3pm UR Post"] },
-  { day: "Sat", jobs: ["Minimal"] },
-  { day: "Sun", jobs: ["5pm Weekly Content Planning", "6pm UR Integration Post"] },
-]
-
-const pipeline = {
-  mrr: 21666,
-  mrrGoal: 40000,
-  clients: 6,
-  clientGoal: 10,
-  hotProspects: [
-    { name: "Nikolaj Albinus", status: "BOOKED", date: "Sun 9:30am" },
-    { name: "Jeff Beggins", status: "BOOKED", date: "Mon" },
-    { name: "Johan Wedellsborg", status: "Waiting", date: "Sent times" },
-  ]
+interface Goal {
+  id: string
+  title: string
+  description: string | null
+  level: string
+  status: string
+  target_value: string
+  current_value: string
+  target_date: string
+  created_at: string
 }
+
+interface Decision {
+  id: string
+  title: string
+  description: string | null
+  context: string | null
+  status: string
+  made_at: string
+  review_at: string | null
+}
+
+interface Loop {
+  id: string
+  type: string
+  title: string
+  description: string | null
+  stale_since: string
+  urgency: string
+  status: string
+}
+
+interface Capture {
+  id: string
+  content: string
+  type: string
+  source: string | null
+  processed: boolean
+  created_at: string
+}
+
+interface PipelineItem {
+  id: string
+  contact_id: string
+  product: string
+  stage: string
+  monthly_value: number
+  probability: number
+  next_action: string | null
+  next_action_date: string | null
+}
+
+// Static data for cron schedule (will be dynamic later)
+const cronSchedule = [
+  { day: "Mon", jobs: ["6am Email", "10:30am Monday Mindset"] },
+  { day: "Tue", jobs: ["Email (3x)", "11am Rapid Rapport"] },
+  { day: "Wed", jobs: ["Email (3x)", "11am Rapid Rapport", "1:30pm MJM", "5pm Lead Conv."] },
+  { day: "Thu", jobs: ["Email (3x)", "11am Rapid Rapport", "1pm Open Door", "4:30pm NLP"] },
+  { day: "Fri", jobs: ["Email (3x)", "3pm UR Post"] },
+  { day: "Sat", jobs: ["Minimal"] },
+  { day: "Sun", jobs: ["5pm Content", "6pm UR Integration"] },
+]
 
 export default function MissionControl() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -104,6 +149,11 @@ export default function MissionControl() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [automations, setAutomations] = useState<Automation[]>([])
   const [ideas, setIdeas] = useState<Idea[]>([])
+  const [goals, setGoals] = useState<Goal[]>([])
+  const [decisions, setDecisions] = useState<Decision[]>([])
+  const [loops, setLoops] = useState<Loop[]>([])
+  const [captures, setCaptures] = useState<Capture[]>([])
+  const [pipeline, setPipeline] = useState<PipelineItem[]>([])
 
   // Fetch data from Supabase
   const fetchData = async () => {
@@ -134,10 +184,48 @@ export default function MissionControl() {
         .select('*')
         .order('priority', { ascending: true })
       
+      // Fetch goals
+      const { data: goalsData } = await supabase
+        .from('goals')
+        .select('*')
+        .order('level')
+      
+      // Fetch decisions
+      const { data: decisionsData } = await supabase
+        .from('decisions')
+        .select('*')
+        .order('made_at', { ascending: false })
+        .limit(10)
+      
+      // Fetch open loops
+      const { data: loopsData } = await supabase
+        .from('loops')
+        .select('*')
+        .eq('status', 'open')
+        .order('urgency')
+      
+      // Fetch recent captures
+      const { data: capturesData } = await supabase
+        .from('captures')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20)
+      
+      // Fetch pipeline
+      const { data: pipelineData } = await supabase
+        .from('pipeline')
+        .select('*')
+        .order('probability', { ascending: false })
+      
       if (tasksData) setTasks(tasksData)
       if (activitiesData) setActivities(activitiesData)
       if (automationsData) setAutomations(automationsData)
       if (ideasData) setIdeas(ideasData)
+      if (goalsData) setGoals(goalsData)
+      if (decisionsData) setDecisions(decisionsData)
+      if (loopsData) setLoops(loopsData)
+      if (capturesData) setCaptures(capturesData)
+      if (pipelineData) setPipeline(pipelineData)
       
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -161,21 +249,51 @@ export default function MissionControl() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_feed' }, fetchData)
       .subscribe()
 
-    const automationsSubscription = supabase
-      .channel('automations-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'automations' }, fetchData)
+    const goalsSubscription = supabase
+      .channel('goals-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'goals' }, fetchData)
+      .subscribe()
+
+    const loopsSubscription = supabase
+      .channel('loops-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'loops' }, fetchData)
       .subscribe()
 
     return () => {
       tasksSubscription.unsubscribe()
       activitiesSubscription.unsubscribe()
-      automationsSubscription.unsubscribe()
+      goalsSubscription.unsubscribe()
+      loopsSubscription.unsubscribe()
     }
   }, [])
 
   // Filter tasks awaiting Matthew
   const awaitingMatthew = tasks.filter(t => t.assigned_to === 'matthew' && t.status === 'pending')
   const aaronTasks = tasks.filter(t => t.assigned_to === 'aaron')
+
+  // Get goals by level
+  const northStar = goals.find(g => g.level === 'north_star')
+  const quarterlyGoals = goals.filter(g => g.level === 'quarterly')
+
+  // Calculate days until September
+  const septemberDate = new Date('2026-09-01')
+  const today = new Date()
+  const daysUntilSeptember = Math.ceil((septemberDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+  // Parse MRR from goals
+  const mrrGoal = quarterlyGoals.find(g => g.title.includes('MRR') || g.title.includes('$40k'))
+  const clientGoal = quarterlyGoals.find(g => g.title.includes('Client') || g.title.includes('10'))
+  
+  // Extract numeric values from strings like "$21,666"
+  const extractNumber = (str: string) => {
+    const match = str?.replace(/[$,]/g, '').match(/[\d.]+/)
+    return match ? parseFloat(match[0]) : 0
+  }
+
+  const currentMRR = mrrGoal ? extractNumber(mrrGoal.current_value) : 21666
+  const targetMRR = 40000
+  const currentClients = clientGoal ? extractNumber(clientGoal.current_value) : 6
+  const targetClients = 10
 
   // Format time
   const formatTime = (dateStr: string) => {
@@ -188,6 +306,22 @@ export default function MissionControl() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
+  const formatRelativeTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays} days ago`
+    return formatDate(dateStr)
+  }
+
+  // Calculate pipeline stats
+  const closedWonPipeline = pipeline.filter(p => p.stage === 'CLOSED-WON')
+  const activePipeline = pipeline.filter(p => !['CLOSED-WON', 'CLOSED-LOST'].includes(p.stage))
+  const totalPipelineValue = activePipeline.reduce((sum, p) => sum + (p.monthly_value * p.probability / 100), 0)
+
   return (
     <div className="min-h-screen bg-zinc-950">
       {/* Header */}
@@ -198,8 +332,8 @@ export default function MissionControl() {
               <Zap className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Aaron&apos;s Mission Control</h1>
-              <p className="text-xs text-zinc-500">Last updated: {lastRefresh.toLocaleTimeString()}</p>
+              <h1 className="text-xl font-bold text-white">Mission Control</h1>
+              <p className="text-xs text-zinc-500">Updated {formatTime(lastRefresh.toISOString())}</p>
             </div>
           </div>
           
@@ -208,7 +342,7 @@ export default function MissionControl() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
               <Input 
-                placeholder="Search everything... (⌘K)" 
+                placeholder="Search... (⌘K)" 
                 className="w-64 pl-10 bg-zinc-800 border-zinc-700 text-zinc-100 placeholder:text-zinc-500"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -219,7 +353,7 @@ export default function MissionControl() {
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="w-5 h-5 text-zinc-400" />
               {awaitingMatthew.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center text-white">
                   {awaitingMatthew.length}
                 </span>
               )}
@@ -240,88 +374,301 @@ export default function MissionControl() {
             <Loader2 className="w-8 h-8 text-zinc-500 animate-spin" />
           </div>
         ) : (
-          <Tabs defaultValue="awaiting" className="space-y-6">
+          <Tabs defaultValue="command" className="space-y-6">
             <TabsList className="bg-zinc-900 border border-zinc-800">
-              <TabsTrigger value="awaiting" className="data-[state=active]:bg-zinc-800 relative">
-                🎯 Awaiting Matthew
-                {awaitingMatthew.length > 0 && (
-                  <Badge className="ml-2 bg-red-500/20 text-red-400 border-red-500/30">
-                    {awaitingMatthew.length}
-                  </Badge>
-                )}
+              <TabsTrigger value="command" className="data-[state=active]:bg-zinc-800">
+                🎯 Command
               </TabsTrigger>
               <TabsTrigger value="week" className="data-[state=active]:bg-zinc-800">
                 📊 This Week
               </TabsTrigger>
               <TabsTrigger value="automation" className="data-[state=active]:bg-zinc-800">
-                🤖 Automation Status
+                🤖 Automation
               </TabsTrigger>
               <TabsTrigger value="activity" className="data-[state=active]:bg-zinc-800">
-                📜 Activity Feed
+                📜 Activity
               </TabsTrigger>
-              <TabsTrigger value="ideas" className="data-[state=active]:bg-zinc-800">
-                💡 Ideas Backlog
-                {ideas.length > 0 && (
-                  <Badge className="ml-2 bg-violet-500/20 text-violet-400 border-violet-500/30">
-                    {ideas.length}
+              <TabsTrigger value="loops" className="data-[state=active]:bg-zinc-800 relative">
+                🔁 Loops
+                {loops.length > 0 && (
+                  <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">
+                    {loops.length}
                   </Badge>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="brain" className="data-[state=active]:bg-zinc-800">
+                🧠 Second Brain
+              </TabsTrigger>
             </TabsList>
 
-            {/* Tab 1: Awaiting Matthew */}
-            <TabsContent value="awaiting" className="space-y-4">
-              <div className="grid gap-4">
-                {awaitingMatthew.length > 0 ? awaitingMatthew.map((item) => (
-                  <Card key={item.id} className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-colors">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <AlertCircle className="w-5 h-5 text-amber-500" />
-                            <h3 className="font-semibold text-lg text-white">{item.title}</h3>
+            {/* ==================== COMMAND TAB (NEW DEFAULT) ==================== */}
+            <TabsContent value="command" className="space-y-6">
+              {/* Needs You Now */}
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                    Needs You Now
+                    {awaitingMatthew.length > 0 && (
+                      <Badge className="ml-2 bg-red-500/20 text-red-400 border-red-500/30">
+                        {awaitingMatthew.length}
+                      </Badge>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {awaitingMatthew.length > 0 ? (
+                    <div className="space-y-3">
+                      {awaitingMatthew.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                          <div className="flex-1">
+                            <div className="font-medium text-white">{item.title}</div>
+                            <div className="text-sm text-zinc-400">{item.description}</div>
                           </div>
-                          <p className="text-zinc-400 ml-8">{item.description}</p>
+                          <div className="flex items-center gap-2 ml-4">
+                            <Badge variant="outline" className={
+                              item.priority === "urgent" 
+                                ? "border-red-500/50 text-red-400" 
+                                : "border-amber-500/50 text-amber-400"
+                            }>
+                              {item.priority}
+                            </Badge>
+                            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                              Review <ArrowRight className="w-4 h-4 ml-1" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <Badge variant="outline" className={
-                            item.priority === "urgent" 
-                              ? "border-red-500/50 text-red-400" 
-                              : item.priority === "high"
-                              ? "border-amber-500/50 text-amber-400"
-                              : "border-zinc-600 text-zinc-400"
-                          }>
-                            {item.due_date ? formatDate(item.due_date) : item.priority}
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
+                      <div className="text-lg font-medium text-white">All clear!</div>
+                      <div className="text-sm text-zinc-400">Nothing needs your attention right now.</div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* September Countdown + Pipeline */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* September Transformation */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Target className="w-5 h-5 text-cyan-500" />
+                      September Transformation
+                    </CardTitle>
+                    <CardDescription>{daysUntilSeptember} days remaining</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Overall Progress */}
+                    <div className="p-4 rounded-lg bg-gradient-to-r from-cyan-950/50 to-emerald-950/50 border border-cyan-800/30">
+                      <div className="flex justify-between mb-2">
+                        <span className="text-sm text-zinc-300">Overall Progress</span>
+                        <span className="text-sm font-bold text-cyan-400">
+                          {Math.round((currentMRR / targetMRR) * 50 + (currentClients / targetClients) * 50)}%
+                        </span>
+                      </div>
+                      <div className="h-3 bg-zinc-800 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-cyan-500 to-emerald-500 rounded-full transition-all"
+                          style={{ width: `${Math.round((currentMRR / targetMRR) * 50 + (currentClients / targetClients) * 50)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* MRR */}
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-zinc-400">Monthly Revenue</span>
+                        <span className="text-white">${currentMRR.toLocaleString()} / ${targetMRR.toLocaleString()}</span>
+                      </div>
+                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-emerald-500 rounded-full"
+                          style={{ width: `${(currentMRR / targetMRR) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Clients */}
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-zinc-400">Coaching Clients</span>
+                        <span className="text-white">{currentClients} / {targetClients}</span>
+                      </div>
+                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-cyan-500 rounded-full"
+                          style={{ width: `${(currentClients / targetClients) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Kristen Time */}
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-zinc-400">Kristen&apos;s Time in MFI</span>
+                        <span className="text-white">35% → 20% goal</span>
+                      </div>
+                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-violet-500 rounded-full"
+                          style={{ width: '35%' }}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Hot Pipeline */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <DollarSign className="w-5 h-5 text-emerald-500" />
+                      Hot Pipeline
+                    </CardTitle>
+                    <CardDescription>
+                      ${Math.round(totalPipelineValue).toLocaleString()} weighted value
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {activePipeline.length > 0 ? activePipeline.slice(0, 5).map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50">
+                          <div>
+                            <div className="text-sm font-medium text-white">{item.product}</div>
+                            <div className="text-xs text-zinc-500">{item.next_action || item.stage}</div>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="outline" className={
+                              item.stage === 'meeting_booked' || item.stage === 'MEETING-BOOKED'
+                                ? "border-emerald-500/50 text-emerald-400"
+                                : item.stage === 'proposal' || item.stage === 'PROPOSAL'
+                                ? "border-cyan-500/50 text-cyan-400"
+                                : "border-zinc-600 text-zinc-400"
+                            }>
+                              {item.probability}%
+                            </Badge>
+                            {item.monthly_value > 0 && (
+                              <div className="text-xs text-zinc-500 mt-1">${item.monthly_value.toLocaleString()}/mo</div>
+                            )}
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="text-center py-4 text-zinc-500">No active pipeline items</div>
+                      )}
+                    </div>
+                    
+                    {/* Quick Stats */}
+                    <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-zinc-800">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-emerald-400">{closedWonPipeline.length}</div>
+                        <div className="text-xs text-zinc-500">Closed Won</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-cyan-400">{activePipeline.length}</div>
+                        <div className="text-xs text-zinc-500">Active Deals</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Recent Activity + Aaron Status */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Recent Activity (2/3) */}
+                <Card className="lg:col-span-2 bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Activity className="w-5 h-5 text-violet-500" />
+                      Recent Activity
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {activities.slice(0, 6).map((activity) => (
+                        <div key={activity.id} className="flex items-start gap-3 p-2 rounded hover:bg-zinc-800/50">
+                          <div className="text-xs text-zinc-500 w-16 shrink-0 pt-0.5">
+                            {formatTime(activity.created_at)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-white truncate">{activity.title}</div>
+                            {activity.description && (
+                              <div className="text-xs text-zinc-500 truncate">{activity.description}</div>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-500 shrink-0">
+                            {activity.type}
                           </Badge>
-                          <Button 
-                            size="sm" 
-                            className="bg-emerald-600 hover:bg-emerald-700"
-                            onClick={() => {
-                              if (item.metadata?.link) {
-                                window.open(item.metadata.link, '_blank')
-                              }
-                            }}
-                          >
-                            View
-                            <ArrowRight className="w-4 h-4 ml-2" />
-                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Aaron Status (1/3) */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Zap className="w-5 h-5 text-amber-500" />
+                      Aaron Status
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Trust Level */}
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-zinc-400">Trust Level</span>
+                        <span className="text-amber-400 font-medium">TIER 2</span>
+                      </div>
+                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-amber-500 rounded-full" style={{ width: '65%' }} />
+                      </div>
+                      <div className="text-xs text-zinc-500 mt-1">Execute with approval</div>
+                    </div>
+
+                    {/* Today's Stats */}
+                    <div className="pt-3 border-t border-zinc-800">
+                      <div className="text-sm text-zinc-400 mb-2">Today</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="p-2 rounded bg-zinc-800/50 text-center">
+                          <div className="text-lg font-bold text-white">
+                            {activities.filter(a => {
+                              const actDate = new Date(a.created_at).toDateString()
+                              return actDate === new Date().toDateString()
+                            }).length}
+                          </div>
+                          <div className="text-xs text-zinc-500">Actions</div>
+                        </div>
+                        <div className="p-2 rounded bg-zinc-800/50 text-center">
+                          <div className="text-lg font-bold text-white">
+                            {activities.filter(a => {
+                              const actDate = new Date(a.created_at).toDateString()
+                              return actDate === new Date().toDateString() && a.type === 'email'
+                            }).length}
+                          </div>
+                          <div className="text-xs text-zinc-500">Emails</div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                )) : (
-                  <Card className="bg-zinc-900 border-zinc-800">
-                    <CardContent className="p-12 text-center">
-                      <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-white mb-2">All clear!</h3>
-                      <p className="text-zinc-400">Nothing needs your attention right now.</p>
-                    </CardContent>
-                  </Card>
-                )}
+                    </div>
+
+                    {/* Decisions */}
+                    <div className="pt-3 border-t border-zinc-800">
+                      <div className="text-sm text-zinc-400 mb-2">Recent Decisions</div>
+                      {decisions.slice(0, 2).map(d => (
+                        <div key={d.id} className="text-xs text-zinc-300 py-1 border-b border-zinc-800 last:border-0">
+                          {d.title}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
 
-            {/* Tab 2: This Week */}
+            {/* ==================== THIS WEEK TAB ==================== */}
             <TabsContent value="week" className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Cron Schedule */}
@@ -368,27 +715,27 @@ export default function MissionControl() {
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-zinc-400">MRR</span>
-                        <span className="text-white font-semibold">${pipeline.mrr.toLocaleString()} / ${pipeline.mrrGoal.toLocaleString()}</span>
+                        <span className="text-white font-semibold">${currentMRR.toLocaleString()} / ${targetMRR.toLocaleString()}</span>
                       </div>
                       <div className="h-3 bg-zinc-800 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all"
-                          style={{ width: `${(pipeline.mrr / pipeline.mrrGoal) * 100}%` }}
+                          style={{ width: `${(currentMRR / targetMRR) * 100}%` }}
                         />
                       </div>
-                      <p className="text-xs text-zinc-500 mt-1">{Math.round((pipeline.mrr / pipeline.mrrGoal) * 100)}% of goal</p>
+                      <p className="text-xs text-zinc-500 mt-1">{Math.round((currentMRR / targetMRR) * 100)}% of goal</p>
                     </div>
 
                     {/* Clients */}
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-zinc-400">Coaching Clients</span>
-                        <span className="text-white font-semibold">{pipeline.clients} / {pipeline.clientGoal}</span>
+                        <span className="text-white font-semibold">{currentClients} / {targetClients}</span>
                       </div>
                       <div className="h-3 bg-zinc-800 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 rounded-full transition-all"
-                          style={{ width: `${(pipeline.clients / pipeline.clientGoal) * 100}%` }}
+                          style={{ width: `${(currentClients / targetClients) * 100}%` }}
                         />
                       </div>
                     </div>
@@ -397,18 +744,18 @@ export default function MissionControl() {
                     <div>
                       <h4 className="text-sm font-semibold text-zinc-300 mb-3 flex items-center gap-2">
                         <Users className="w-4 h-4" />
-                        Hot Prospects
+                        Active Pipeline
                       </h4>
                       <div className="space-y-2">
-                        {pipeline.hotProspects.map((prospect, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-2 rounded bg-zinc-800">
-                            <span className="text-sm text-zinc-300">{prospect.name}</span>
+                        {activePipeline.slice(0, 4).map((item) => (
+                          <div key={item.id} className="flex items-center justify-between p-2 rounded bg-zinc-800">
+                            <span className="text-sm text-zinc-300">{item.product}</span>
                             <Badge variant="outline" className={
-                              prospect.status === "BOOKED" 
+                              item.probability >= 70 
                                 ? "border-emerald-500/50 text-emerald-400"
                                 : "border-amber-500/50 text-amber-400"
                             }>
-                              {prospect.date}
+                              {item.probability}%
                             </Badge>
                           </div>
                         ))}
@@ -418,7 +765,7 @@ export default function MissionControl() {
                 </Card>
               </div>
 
-              {/* Task List */}
+              {/* Aaron's Tasks */}
               <Card className="bg-zinc-900 border-zinc-800">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -450,40 +797,57 @@ export default function MissionControl() {
               </Card>
             </TabsContent>
 
-            {/* Tab 3: Automation Status */}
+            {/* ==================== AUTOMATION TAB (LIST VIEW) ==================== */}
             <TabsContent value="automation" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {automations.length > 0 ? automations.map((auto) => (
-                  <Card key={auto.id} className="bg-zinc-900 border-zinc-800">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    🤖 Automation Status
+                  </CardTitle>
+                  <CardDescription>
+                    {automations.filter(a => a.last_status === 'success').length} healthy, {' '}
+                    {automations.filter(a => a.last_status === 'failed').length} failed
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-1">
+                    {/* Header */}
+                    <div className="grid grid-cols-12 gap-4 px-3 py-2 text-xs font-medium text-zinc-500 border-b border-zinc-800">
+                      <div className="col-span-1">Status</div>
+                      <div className="col-span-5">Name</div>
+                      <div className="col-span-3">Schedule</div>
+                      <div className="col-span-3">Last Run</div>
+                    </div>
+                    
+                    {/* Rows */}
+                    {automations.length > 0 ? automations.map((auto) => (
+                      <div key={auto.id} className="grid grid-cols-12 gap-4 px-3 py-3 hover:bg-zinc-800/50 rounded items-center">
+                        <div className="col-span-1">
                           {auto.last_status === 'success' && (
-                            <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                            <div className="w-3 h-3 rounded-full bg-emerald-500" title="Success" />
                           )}
                           {auto.last_status === 'failed' && (
-                            <div className="w-3 h-3 rounded-full bg-red-500" />
+                            <div className="w-3 h-3 rounded-full bg-red-500" title="Failed" />
                           )}
                           {auto.last_status === 'pending' && (
-                            <div className="w-3 h-3 rounded-full bg-amber-500" />
+                            <div className="w-3 h-3 rounded-full bg-amber-500" title="Pending" />
                           )}
-                          <span className="font-medium text-zinc-200">{auto.name}</span>
+                          {!auto.last_status && (
+                            <div className="w-3 h-3 rounded-full bg-zinc-600" title="Never run" />
+                          )}
                         </div>
-                        <span className="text-xs text-zinc-500">
-                          {auto.last_run ? formatTime(auto.last_run) : 'Never'}
-                        </span>
+                        <div className="col-span-5 text-sm text-zinc-200">{auto.name}</div>
+                        <div className="col-span-3 text-sm text-zinc-500">{auto.schedule}</div>
+                        <div className="col-span-3 text-sm text-zinc-500">
+                          {auto.last_run ? formatRelativeTime(auto.last_run) : 'Never'}
+                        </div>
                       </div>
-                      <p className="text-sm text-zinc-400">{auto.description || auto.schedule}</p>
-                    </CardContent>
-                  </Card>
-                )) : (
-                  <Card className="col-span-full bg-zinc-900 border-zinc-800">
-                    <CardContent className="p-8 text-center">
-                      <p className="text-zinc-500">No automations configured yet</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+                    )) : (
+                      <div className="text-center py-8 text-zinc-500">No automations configured</div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Summary Stats */}
               <div className="grid grid-cols-3 gap-4">
@@ -492,7 +856,7 @@ export default function MissionControl() {
                     <div className="text-4xl font-bold text-emerald-400 mb-2">
                       {automations.filter(a => a.last_status === 'success').length}
                     </div>
-                    <div className="text-sm text-emerald-300/70">Successful</div>
+                    <div className="text-sm text-emerald-300/70">Healthy</div>
                   </CardContent>
                 </Card>
                 <Card className="bg-red-950/50 border-red-800/50">
@@ -506,7 +870,7 @@ export default function MissionControl() {
                 <Card className="bg-amber-950/50 border-amber-800/50">
                   <CardContent className="p-6 text-center">
                     <div className="text-4xl font-bold text-amber-400 mb-2">
-                      {automations.filter(a => a.last_status === 'pending').length}
+                      {automations.filter(a => !a.last_status || a.last_status === 'pending').length}
                     </div>
                     <div className="text-sm text-amber-300/70">Pending</div>
                   </CardContent>
@@ -514,7 +878,7 @@ export default function MissionControl() {
               </div>
             </TabsContent>
 
-            {/* Tab 4: Activity Feed */}
+            {/* ==================== ACTIVITY FEED TAB ==================== */}
             <TabsContent value="activity">
               <Card className="bg-zinc-900 border-zinc-800">
                 <CardHeader>
@@ -524,7 +888,9 @@ export default function MissionControl() {
                       {activities.length} entries
                     </Badge>
                   </CardTitle>
-                  <CardDescription>Every action Aaron takes, logged for full transparency</CardDescription>
+                  <CardDescription>
+                    Every action Aaron takes, logged for full transparency (Trust Layer)
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="h-[600px] pr-4">
@@ -533,10 +899,13 @@ export default function MissionControl() {
                         <div key={activity.id} className="flex gap-4 pb-4 border-b border-zinc-800 last:border-0">
                           <div className="text-sm text-zinc-500 w-24 shrink-0">
                             {formatTime(activity.created_at)}
+                            <div className="text-xs">{formatDate(activity.created_at)}</div>
                           </div>
                           <div className="flex-1">
                             <div className="font-medium text-zinc-200 mb-1">{activity.title}</div>
-                            <div className="text-sm text-zinc-400">{activity.description}</div>
+                            {activity.description && (
+                              <div className="text-sm text-zinc-400">{activity.description}</div>
+                            )}
                           </div>
                           <Badge variant="outline" className={
                             activity.status === 'completed' 
@@ -549,7 +918,7 @@ export default function MissionControl() {
                           </Badge>
                         </div>
                       )) : (
-                        <p className="text-zinc-500 text-center py-8">No activity yet. Aaron will start logging actions here.</p>
+                        <p className="text-zinc-500 text-center py-8">No activity yet.</p>
                       )}
                     </div>
                   </ScrollArea>
@@ -557,93 +926,162 @@ export default function MissionControl() {
               </Card>
             </TabsContent>
 
-            {/* Tab 5: Ideas Backlog */}
-            <TabsContent value="ideas" className="space-y-6">
-              {/* Priority Groups */}
-              {['high', 'medium', 'low'].map((priority) => {
-                const priorityIdeas = ideas.filter(i => i.priority === priority)
-                if (priorityIdeas.length === 0) return null
-                return (
-                  <Card key={priority} className="bg-zinc-900 border-zinc-800">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        {priority === 'high' && '🔥'}
-                        {priority === 'medium' && '📌'}
-                        {priority === 'low' && '💭'}
-                        {priority.charAt(0).toUpperCase() + priority.slice(1)} Priority
-                        <Badge variant="outline" className="ml-2 border-zinc-700 text-zinc-500">
-                          {priorityIdeas.length}
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {priorityIdeas.map((idea) => (
-                          <div key={idea.id} className="flex items-start justify-between p-4 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors">
-                            <div className="flex-1">
-                              <div className="font-medium text-zinc-200 mb-1">{idea.title}</div>
-                              <div className="text-sm text-zinc-400">{idea.description}</div>
-                            </div>
-                            <div className="flex items-center gap-2 ml-4">
+            {/* ==================== LOOPS TAB (NEW) ==================== */}
+            <TabsContent value="loops" className="space-y-6">
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <RotateCcw className="w-5 h-5 text-amber-500" />
+                    Open Loops
+                    {loops.length > 0 && (
+                      <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">
+                        {loops.length}
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    Stalled items, unanswered messages, and incomplete projects
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loops.length > 0 ? (
+                    <div className="space-y-3">
+                      {loops.map((loop) => (
+                        <div key={loop.id} className="flex items-start justify-between p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
                               <Badge variant="outline" className={
-                                idea.status === 'in_progress'
-                                  ? "border-cyan-500/30 text-cyan-400"
-                                  : idea.status === 'planned'
-                                  ? "border-amber-500/30 text-amber-400"
-                                  : "border-zinc-700 text-zinc-500"
+                                loop.urgency === 'critical' ? "border-red-500/50 text-red-400" :
+                                loop.urgency === 'high' ? "border-amber-500/50 text-amber-400" :
+                                "border-zinc-600 text-zinc-400"
                               }>
-                                {idea.status}
+                                {loop.urgency}
                               </Badge>
-                              {idea.category && (
-                                <Badge variant="outline" className="border-violet-500/30 text-violet-400">
-                                  {idea.category}
-                                </Badge>
-                              )}
+                              <span className="text-xs text-zinc-500">{loop.type.replace(/_/g, ' ')}</span>
+                            </div>
+                            <div className="font-medium text-white">{loop.title}</div>
+                            {loop.description && (
+                              <div className="text-sm text-zinc-400 mt-1">{loop.description}</div>
+                            )}
+                            <div className="text-xs text-zinc-500 mt-2">
+                              Stale since {formatRelativeTime(loop.stale_since)}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-              
-              {ideas.length === 0 && (
-                <Card className="bg-zinc-900 border-zinc-800">
-                  <CardContent className="p-12 text-center">
-                    <p className="text-zinc-500">No ideas in the backlog yet.</p>
-                  </CardContent>
-                </Card>
-              )}
+                          <div className="flex gap-2 ml-4">
+                            <Button size="sm" variant="outline" className="border-zinc-700">
+                              Dismiss
+                            </Button>
+                            <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+                              Resolve
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
+                      <div className="text-lg font-medium text-white">All loops closed!</div>
+                      <div className="text-sm text-zinc-400">No stalled items or incomplete projects.</div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-              {/* Summary Stats */}
-              <div className="grid grid-cols-4 gap-4">
+            {/* ==================== SECOND BRAIN TAB (NEW) ==================== */}
+            <TabsContent value="brain" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Captures List */}
+                <Card className="lg:col-span-2 bg-zinc-900 border-zinc-800">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Brain className="w-5 h-5 text-violet-500" />
+                      Recent Captures
+                    </CardTitle>
+                    <CardDescription>
+                      Ideas, insights, and notes captured from conversations
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[400px]">
+                      <div className="space-y-3">
+                        {captures.length > 0 ? captures.map((capture) => (
+                          <div key={capture.id} className="p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                            <div className="flex items-start justify-between mb-2">
+                              <Badge variant="outline" className={
+                                capture.type === 'insight' ? "border-violet-500/50 text-violet-400" :
+                                capture.type === 'idea' ? "border-cyan-500/50 text-cyan-400" :
+                                capture.type === 'task' ? "border-amber-500/50 text-amber-400" :
+                                "border-zinc-600 text-zinc-400"
+                              }>
+                                {capture.type}
+                              </Badge>
+                              <span className="text-xs text-zinc-500">{formatRelativeTime(capture.created_at)}</span>
+                            </div>
+                            <div className="text-sm text-zinc-200">{capture.content}</div>
+                            {capture.source && (
+                              <div className="text-xs text-zinc-500 mt-2">Source: {capture.source}</div>
+                            )}
+                          </div>
+                        )) : (
+                          <div className="text-center py-8 text-zinc-500">
+                            No captures yet. Ideas and insights will appear here.
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                {/* Decisions Log */}
                 <Card className="bg-zinc-900 border-zinc-800">
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold text-white mb-1">{ideas.length}</div>
-                    <div className="text-xs text-zinc-500">Total Ideas</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-red-950/30 border-red-800/30">
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold text-red-400 mb-1">{ideas.filter(i => i.priority === 'high').length}</div>
-                    <div className="text-xs text-red-300/70">High Priority</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-cyan-950/30 border-cyan-800/30">
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold text-cyan-400 mb-1">{ideas.filter(i => i.status === 'in_progress').length}</div>
-                    <div className="text-xs text-cyan-300/70">In Progress</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-amber-950/30 border-amber-800/30">
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold text-amber-400 mb-1">{ideas.filter(i => i.status === 'planned').length}</div>
-                    <div className="text-xs text-amber-300/70">Planned</div>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-emerald-500" />
+                      Decision Log
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {decisions.length > 0 ? decisions.map((decision) => (
+                        <div key={decision.id} className="p-3 rounded-lg bg-zinc-800/50">
+                          <div className="font-medium text-sm text-white mb-1">{decision.title}</div>
+                          {decision.description && (
+                            <div className="text-xs text-zinc-400 mb-2">{decision.description}</div>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-zinc-500">{formatDate(decision.made_at)}</span>
+                            <Badge variant="outline" className="text-xs border-emerald-500/30 text-emerald-400">
+                              {decision.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="text-center py-4 text-zinc-500">No decisions logged yet.</div>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Quick Capture (placeholder) */}
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardContent className="p-4">
+                  <div className="flex gap-3">
+                    <Input 
+                      placeholder="Quick capture — type an idea, insight, or note..."
+                      className="flex-1 bg-zinc-800 border-zinc-700 text-zinc-100"
+                    />
+                    <Button className="bg-violet-600 hover:bg-violet-700">
+                      <Lightbulb className="w-4 h-4 mr-2" />
+                      Capture
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
+
           </Tabs>
         )}
       </main>

@@ -1,0 +1,8 @@
+#!/bin/bash
+# Mission Control CLI wrapper
+# Usage: mc activity email "Email Triage" "Processed 15 emails"
+#        mc pipeline "John Doe" meeting_booked 4000 "Booked for Monday"
+#        mc capture idea "AI course concept"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+node "$SCRIPT_DIR/aaron-logger.js" "$@"
