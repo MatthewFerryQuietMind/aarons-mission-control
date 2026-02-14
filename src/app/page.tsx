@@ -665,83 +665,85 @@ export default function MissionControl() {
               </Card>
 
               {/* Needs Clarity */}
-              {needsClarity.length > 0 && (
-                <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-amber-500">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <AlertCircle className="w-5 h-5 text-amber-500" />
-                      Needs Clarity
+              <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-amber-500">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <AlertCircle className="w-5 h-5 text-amber-500" />
+                    Needs Clarity
+                    {needsClarity.length > 0 && (
                       <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">
                         {needsClarity.length}
                       </Badge>
-                    </CardTitle>
-                    <CardDescription>Items Aaron couldn&apos;t fully categorize — quick answers needed</CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                    )}
+                  </CardTitle>
+                  <CardDescription>Items Aaron couldn&apos;t fully categorize — quick answers needed</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {needsClarity.length > 0 ? (
                     <div className="space-y-3">
-                      {needsClarity.slice(0, 5).map((item) => (
+                      {needsClarity.map((item) => (
                         <div key={item.id} className="p-4 rounded-lg bg-amber-950/20 border border-amber-800/30">
                           <div className="font-medium text-white mb-2">{item.title}</div>
                           {item.clarity_question && (
-                            <div className="text-sm text-amber-300 mb-3">📍 {item.clarity_question}</div>
+                            <div className="text-sm text-amber-300 mb-3">❓ {item.clarity_question}</div>
                           )}
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="outline" className="border-zinc-700 text-xs">
-                              For Me
+                          <div className="flex flex-wrap gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-emerald-700 text-emerald-400 text-xs hover:bg-emerald-950/50"
+                              onClick={() => {
+                                updateTaskStatus(item.id, 'active')
+                                // Also clear the needs_clarity flag
+                                supabase.from('tasks').update({ needs_clarity: false, assigned_to: 'matthew' }).eq('id', item.id)
+                                showToast('Assigned to Matthew')
+                              }}
+                            >
+                              🟢 For Me
                             </Button>
-                            <Button size="sm" variant="outline" className="border-zinc-700 text-xs">
-                              For Aaron
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-cyan-700 text-cyan-400 text-xs hover:bg-cyan-950/50"
+                              onClick={() => {
+                                supabase.from('tasks').update({ needs_clarity: false, assigned_to: 'aaron', status: 'active' }).eq('id', item.id)
+                                showToast('Assigned to Aaron')
+                                fetchData()
+                              }}
+                            >
+                              🔵 For Aaron
                             </Button>
-                            <Button size="sm" variant="outline" className="border-zinc-700 text-xs">
-                              Later
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-zinc-700 text-zinc-400 text-xs hover:bg-zinc-800"
+                              onClick={() => {
+                                supabase.from('tasks').update({ needs_clarity: false, status: 'someday' }).eq('id', item.id)
+                                showToast('Moved to Someday')
+                                fetchData()
+                              }}
+                            >
+                              ⏸️ Later
                             </Button>
-                            <Button size="sm" variant="outline" className="border-red-800 text-red-400 text-xs">
-                              Kill
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-red-800 text-red-400 text-xs hover:bg-red-950/50"
+                              onClick={() => {
+                                updateTaskStatus(item.id, 'killed')
+                                supabase.from('tasks').update({ needs_clarity: false }).eq('id', item.id)
+                              }}
+                            >
+                              🗑️ Kill
                             </Button>
                           </div>
                         </div>
                       ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Wins Summary */}
-              <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-emerald-500">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    Wins This Week
-                    <Badge className="ml-2 bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                      {completedThisWeek.length}
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription>Tasks completed in the last 7 days</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {completedThisWeek.length > 0 ? (
-                    <div className="space-y-2">
-                      {completedThisWeek.slice(0, 5).map((task) => (
-                        <div key={task.id} className="flex items-center gap-3 p-2 rounded-lg bg-emerald-950/20">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm text-zinc-200 truncate">{task.title}</div>
-                            <div className="text-xs text-zinc-500">
-                              {task.assigned_to === 'matthew' ? '🟢' : '🔵'} {task.assigned_to} • {formatRelativeTime(task.completed_at || task.updated_at)}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      {completedThisWeek.length > 5 && (
-                        <div className="text-center pt-2">
-                          <span className="text-xs text-zinc-500">+{completedThisWeek.length - 5} more wins</span>
-                        </div>
-                      )}
                     </div>
                   ) : (
-                    <div className="text-center py-4">
-                      <div className="text-sm text-zinc-400">No completions yet this week</div>
-                      <div className="text-xs text-zinc-500 mt-1">Get after it! 💪</div>
+                    <div className="text-center py-6">
+                      <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+                      <div className="text-sm text-zinc-400">All clear! Everything is categorized.</div>
                     </div>
                   )}
                 </CardContent>
