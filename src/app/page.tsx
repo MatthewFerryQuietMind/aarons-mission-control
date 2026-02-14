@@ -132,6 +132,17 @@ interface PipelineItem {
   }
 }
 
+interface WeeklyPriority {
+  id: string
+  week_start: string
+  priority_1: string | null
+  priority_2: string | null
+  priority_3: string | null
+  notes: string | null
+  status: string
+  created_at: string
+}
+
 // Static data for cron schedule (will be dynamic later)
 const cronSchedule = [
   { day: "Mon", jobs: ["6am Email", "10:30am Monday Mindset"] },
@@ -158,6 +169,7 @@ export default function MissionControl() {
   const [loops, setLoops] = useState<Loop[]>([])
   const [captures, setCaptures] = useState<Capture[]>([])
   const [pipeline, setPipeline] = useState<PipelineItem[]>([])
+  const [weeklyPriorities, setWeeklyPriorities] = useState<WeeklyPriority | null>(null)
 
   // Fetch data from Supabase
   const fetchData = async () => {
@@ -221,6 +233,14 @@ export default function MissionControl() {
         .select('*, contacts(name, email)')
         .order('probability', { ascending: false })
       
+      // Fetch current week's priorities
+      const { data: prioritiesData } = await supabase
+        .from('weekly_priorities')
+        .select('*')
+        .eq('status', 'active')
+        .order('week_start', { ascending: false })
+        .limit(1)
+      
       if (tasksData) setTasks(tasksData)
       if (activitiesData) setActivities(activitiesData)
       if (automationsData) setAutomations(automationsData)
@@ -230,6 +250,7 @@ export default function MissionControl() {
       if (loopsData) setLoops(loopsData)
       if (capturesData) setCaptures(capturesData)
       if (pipelineData) setPipeline(pipelineData)
+      if (prioritiesData && prioritiesData.length > 0) setWeeklyPriorities(prioritiesData[0])
       
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -727,65 +748,51 @@ export default function MissionControl() {
                   </CardContent>
                 </Card>
 
-                {/* Pipeline Snapshot */}
+                {/* Weekly Focus */}
                 <Card className="bg-zinc-900 border-zinc-800">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <DollarSign className="w-5 h-5 text-emerald-500" />
-                      Pipeline
+                      <Target className="w-5 h-5 text-amber-500" />
+                      Weekly Focus
                     </CardTitle>
+                    <CardDescription>
+                      {weeklyPriorities ? `Week of ${new Date(weeklyPriorities.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'What matters this week?'}
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* MRR Progress */}
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-zinc-400">MRR</span>
-                        <span className="text-white font-semibold">${currentMRR.toLocaleString()} / ${targetMRR.toLocaleString()}</span>
-                      </div>
-                      <div className="h-3 bg-zinc-800 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all"
-                          style={{ width: `${(currentMRR / targetMRR) * 100}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-zinc-500 mt-1">{Math.round((currentMRR / targetMRR) * 100)}% of goal</p>
-                    </div>
-
-                    {/* Clients */}
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-zinc-400">Coaching Clients</span>
-                        <span className="text-white font-semibold">{currentClients} / {targetClients}</span>
-                      </div>
-                      <div className="h-3 bg-zinc-800 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 rounded-full transition-all"
-                          style={{ width: `${(currentClients / targetClients) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Hot Prospects */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-zinc-300 mb-3 flex items-center gap-2">
-                        <Users className="w-4 h-4" />
-                        Active Pipeline
-                      </h4>
-                      <div className="space-y-2">
-                        {activePipeline.slice(0, 4).map((item) => (
-                          <div key={item.id} className="flex items-center justify-between p-2 rounded bg-zinc-800">
-                            <span className="text-sm text-zinc-300">{item.product}</span>
-                            <Badge variant="outline" className={
-                              item.probability >= 70 
-                                ? "border-emerald-500/50 text-emerald-400"
-                                : "border-amber-500/50 text-amber-400"
-                            }>
-                              {item.probability}%
-                            </Badge>
+                  <CardContent className="space-y-4">
+                    {weeklyPriorities ? (
+                      <>
+                        {weeklyPriorities.priority_1 && (
+                          <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-950/30 border border-amber-800/30">
+                            <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-xs font-bold text-black shrink-0">1</div>
+                            <div className="text-sm text-zinc-200">{weeklyPriorities.priority_1}</div>
                           </div>
-                        ))}
+                        )}
+                        {weeklyPriorities.priority_2 && (
+                          <div className="flex items-start gap-3 p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                            <div className="w-6 h-6 rounded-full bg-zinc-600 flex items-center justify-center text-xs font-bold text-white shrink-0">2</div>
+                            <div className="text-sm text-zinc-200">{weeklyPriorities.priority_2}</div>
+                          </div>
+                        )}
+                        {weeklyPriorities.priority_3 && (
+                          <div className="flex items-start gap-3 p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                            <div className="w-6 h-6 rounded-full bg-zinc-600 flex items-center justify-center text-xs font-bold text-white shrink-0">3</div>
+                            <div className="text-sm text-zinc-200">{weeklyPriorities.priority_3}</div>
+                          </div>
+                        )}
+                        {weeklyPriorities.notes && (
+                          <div className="pt-3 border-t border-zinc-800">
+                            <div className="text-xs text-zinc-500">{weeklyPriorities.notes}</div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-6">
+                        <Target className="w-10 h-10 text-zinc-600 mx-auto mb-3" />
+                        <div className="text-sm text-zinc-400 mb-2">No priorities set for this week</div>
+                        <div className="text-xs text-zinc-500">Sunday 5pm — Aaron will ask you!</div>
                       </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
