@@ -478,6 +478,12 @@ export default function MissionControl() {
               <TabsTrigger value="command" className="data-[state=active]:bg-zinc-800">
                 🎯 Command
               </TabsTrigger>
+              <TabsTrigger value="tasks" className="data-[state=active]:bg-zinc-800 relative">
+                📋 Tasks
+                <Badge className="ml-2 bg-zinc-700 text-zinc-300 border-zinc-600">
+                  {tasks.filter(t => !['done', 'killed'].includes(t.status)).length}
+                </Badge>
+              </TabsTrigger>
               <TabsTrigger value="week" className="data-[state=active]:bg-zinc-800">
                 📊 This Week
               </TabsTrigger>
@@ -486,14 +492,6 @@ export default function MissionControl() {
               </TabsTrigger>
               <TabsTrigger value="activity" className="data-[state=active]:bg-zinc-800">
                 📜 Activity
-              </TabsTrigger>
-              <TabsTrigger value="loops" className="data-[state=active]:bg-zinc-800 relative">
-                🔁 Loops
-                {loops.length > 0 && (
-                  <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">
-                    {loops.length}
-                  </Badge>
-                )}
               </TabsTrigger>
               <TabsTrigger value="brain" className="data-[state=active]:bg-zinc-800">
                 🧠 Second Brain
@@ -550,6 +548,48 @@ export default function MissionControl() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Needs Clarity */}
+              {needsClarity.length > 0 && (
+                <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-amber-500">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <AlertCircle className="w-5 h-5 text-amber-500" />
+                      Needs Clarity
+                      <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">
+                        {needsClarity.length}
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription>Items Aaron couldn&apos;t fully categorize — quick answers needed</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {needsClarity.slice(0, 5).map((item) => (
+                        <div key={item.id} className="p-4 rounded-lg bg-amber-950/20 border border-amber-800/30">
+                          <div className="font-medium text-white mb-2">{item.title}</div>
+                          {item.clarity_question && (
+                            <div className="text-sm text-amber-300 mb-3">📍 {item.clarity_question}</div>
+                          )}
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" className="border-zinc-700 text-xs">
+                              For Me
+                            </Button>
+                            <Button size="sm" variant="outline" className="border-zinc-700 text-xs">
+                              For Aaron
+                            </Button>
+                            <Button size="sm" variant="outline" className="border-zinc-700 text-xs">
+                              Later
+                            </Button>
+                            <Button size="sm" variant="outline" className="border-red-800 text-red-400 text-xs">
+                              Kill
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* September Countdown + Pipeline */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -768,6 +808,123 @@ export default function MissionControl() {
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            {/* ==================== TASKS TAB (FULL LIST) ==================== */}
+            <TabsContent value="tasks" className="space-y-6">
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    📋 All Tasks
+                    <Badge variant="outline" className="ml-2 border-zinc-700 text-zinc-400">
+                      {tasks.filter(t => !['done', 'killed'].includes(t.status)).length} active
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>Full task list from Google Tasks — everything in one place</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Task Sections */}
+                  <div className="space-y-6">
+                    {/* Urgent */}
+                    {tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed'].includes(t.status)).length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-red-400 mb-3 flex items-center gap-2">
+                          🔴 URGENT ({tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed'].includes(t.status)).length})
+                        </h3>
+                        <div className="space-y-2">
+                          {tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed'].includes(t.status)).map(task => (
+                            <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-red-950/20 border border-red-800/30">
+                              <div className="flex-1">
+                                <div className="text-sm text-white">{task.title}</div>
+                                <div className="text-xs text-zinc-500 mt-1">
+                                  {task.assigned_to === 'matthew' ? '🟢' : '🔵'} {task.assigned_to}
+                                  {task.google_list_name && ` • ${task.google_list_name}`}
+                                </div>
+                              </div>
+                              {task.due_date && (
+                                <Badge variant="outline" className="border-red-500/50 text-red-400 text-xs">
+                                  {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Matthew's Tasks */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-emerald-400 mb-3 flex items-center gap-2">
+                        🟢 MATTHEW ({allActiveForMatthew.length})
+                      </h3>
+                      <div className="space-y-2 max-h-80 overflow-y-auto">
+                        {allActiveForMatthew.filter(t => t.urgency !== 'urgent').map(task => (
+                          <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors">
+                            <div className="flex-1">
+                              <div className="text-sm text-white">{task.title}</div>
+                              <div className="text-xs text-zinc-500 mt-1">
+                                {task.status}
+                                {task.person && ` • ${task.person}`}
+                                {task.google_list_name && ` • ${task.google_list_name}`}
+                              </div>
+                            </div>
+                            <Badge variant="outline" className={
+                              task.urgency === 'high' ? "border-amber-500/50 text-amber-400" : "border-zinc-700 text-zinc-500"
+                            }>
+                              {task.urgency}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Aaron's Tasks */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-cyan-400 mb-3 flex items-center gap-2">
+                        🔵 AARON ({aaronTasks.length})
+                      </h3>
+                      <div className="space-y-2 max-h-80 overflow-y-auto">
+                        {aaronTasks.map(task => (
+                          <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors">
+                            <div className="flex-1">
+                              <div className="text-sm text-white">{task.title}</div>
+                              <div className="text-xs text-zinc-500 mt-1">
+                                {task.status}
+                                {task.type !== 'task' && ` • ${task.type}`}
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="border-zinc-700 text-zinc-500">
+                              {task.urgency}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Someday/Later */}
+                    {tasks.filter(t => t.status === 'someday').length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-zinc-500 mb-3 flex items-center gap-2">
+                          ⏸️ SOMEDAY/LATER ({tasks.filter(t => t.status === 'someday').length})
+                        </h3>
+                        <div className="space-y-2 max-h-60 overflow-y-auto">
+                          {tasks.filter(t => t.status === 'someday').map(task => (
+                            <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/30">
+                              <div className="flex-1">
+                                <div className="text-sm text-zinc-400">{task.title}</div>
+                                <div className="text-xs text-zinc-600 mt-1">
+                                  {task.assigned_to === 'matthew' ? '🟢' : '🔵'} {task.assigned_to}
+                                  {task.type !== 'task' && ` • ${task.type}`}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* ==================== THIS WEEK TAB ==================== */}
