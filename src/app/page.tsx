@@ -50,6 +50,7 @@ interface Task {
   notes: string | null
   created_at: string
   updated_at: string
+  completed_at: string | null
 }
 
 interface ActivityItem {
@@ -401,11 +402,39 @@ export default function MissionControl() {
     !['done', 'killed'].includes(t.status)
   )
   
-  // Aaron's tasks
+  // Aaron's tasks by status
   const aaronTasks = tasks.filter(t => 
     t.assigned_to === 'aaron' && 
     !['done', 'killed'].includes(t.status)
   )
+  const aaronQueue = tasks.filter(t => 
+    t.assigned_to === 'aaron' && 
+    ['pending', 'active'].includes(t.status) &&
+    t.status !== 'in_progress' && t.status !== 'needs_input'
+  )
+  const aaronInProgress = tasks.filter(t => 
+    t.assigned_to === 'aaron' && 
+    t.status === 'in_progress'
+  )
+  const aaronNeedsMatthew = tasks.filter(t => 
+    t.assigned_to === 'aaron' && 
+    (t.status === 'needs_input' || t.needs_clarity)
+  )
+  const aaronCompleted = tasks.filter(t => 
+    t.assigned_to === 'aaron' && 
+    t.status === 'done'
+  ).sort((a, b) => new Date(b.completed_at || b.updated_at).getTime() - new Date(a.completed_at || a.updated_at).getTime())
+  
+  // Completed tasks (all assignees) for Wins view
+  const completedTasks = tasks.filter(t => t.status === 'done')
+    .sort((a, b) => new Date(b.completed_at || b.updated_at).getTime() - new Date(a.completed_at || a.updated_at).getTime())
+  
+  // Completed this week
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const completedThisWeek = completedTasks.filter(t => {
+    const completedDate = new Date(t.completed_at || t.updated_at)
+    return completedDate >= weekAgo
+  })
   
   // Tasks needing clarity
   const needsClarity = tasks.filter(t => t.needs_clarity)
@@ -538,6 +567,14 @@ export default function MissionControl() {
                   {tasks.filter(t => !['done', 'killed'].includes(t.status)).length}
                 </Badge>
               </TabsTrigger>
+              <TabsTrigger value="aaron" className="data-[state=active]:bg-zinc-800 relative">
+                🤖 Aaron
+                {tasks.filter(t => t.assigned_to === 'aaron' && t.status === 'needs_input').length > 0 && (
+                  <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">
+                    {tasks.filter(t => t.assigned_to === 'aaron' && t.status === 'needs_input').length}
+                  </Badge>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="week" className="data-[state=active]:bg-zinc-800">
                 📊 This Week
               </TabsTrigger>
@@ -668,6 +705,47 @@ export default function MissionControl() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Wins Summary */}
+              <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-emerald-500">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                    Wins This Week
+                    <Badge className="ml-2 bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                      {completedThisWeek.length}
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>Tasks completed in the last 7 days</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {completedThisWeek.length > 0 ? (
+                    <div className="space-y-2">
+                      {completedThisWeek.slice(0, 5).map((task) => (
+                        <div key={task.id} className="flex items-center gap-3 p-2 rounded-lg bg-emerald-950/20">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-zinc-200 truncate">{task.title}</div>
+                            <div className="text-xs text-zinc-500">
+                              {task.assigned_to === 'matthew' ? '🟢' : '🔵'} {task.assigned_to} • {formatRelativeTime(task.completed_at || task.updated_at)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {completedThisWeek.length > 5 && (
+                        <div className="text-center pt-2">
+                          <span className="text-xs text-zinc-500">+{completedThisWeek.length - 5} more wins</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <div className="text-sm text-zinc-400">No completions yet this week</div>
+                      <div className="text-xs text-zinc-500 mt-1">Get after it! 💪</div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* September Countdown + Pipeline */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1000,7 +1078,194 @@ export default function MissionControl() {
                         </div>
                       </div>
                     )}
+
+                    {/* Completed */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-emerald-400 mb-3 flex items-center gap-2">
+                        ✅ COMPLETED ({completedTasks.length})
+                      </h3>
+                      <div className="space-y-2 max-h-80 overflow-y-auto">
+                        {completedTasks.length > 0 ? completedTasks.slice(0, 20).map(task => (
+                          <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-emerald-950/10 hover:bg-emerald-950/20 transition-colors">
+                            <div className="flex-1">
+                              <div className="text-sm text-zinc-300">{task.title}</div>
+                              <div className="text-xs text-zinc-500 mt-1">
+                                {task.assigned_to === 'matthew' ? '🟢' : '🔵'} {task.assigned_to}
+                                {' • '}{formatRelativeTime(task.completed_at || task.updated_at)}
+                              </div>
+                            </div>
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          </div>
+                        )) : (
+                          <div className="text-center py-4 text-zinc-500">No completed tasks yet</div>
+                        )}
+                        {completedTasks.length > 20 && (
+                          <div className="text-center pt-2">
+                            <span className="text-xs text-zinc-500">Showing 20 of {completedTasks.length} completed</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ==================== AARON TAB ==================== */}
+            <TabsContent value="aaron" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Needs Matthew */}
+                <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-amber-500">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <AlertCircle className="w-5 h-5 text-amber-500" />
+                      Needs Your Input
+                      {aaronNeedsMatthew.length > 0 && (
+                        <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">
+                          {aaronNeedsMatthew.length}
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <CardDescription>Aaron is blocked and needs your help</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {aaronNeedsMatthew.length > 0 ? (
+                      <div className="space-y-2">
+                        {aaronNeedsMatthew.map((task) => (
+                          <div key={task.id} className="p-3 rounded-lg bg-amber-950/20 border border-amber-800/30">
+                            <div className="font-medium text-white">{task.title}</div>
+                            {task.clarity_question && (
+                              <div className="text-sm text-amber-300 mt-1">❓ {task.clarity_question}</div>
+                            )}
+                            {task.description && !task.clarity_question && (
+                              <div className="text-sm text-zinc-400 mt-1">{task.description}</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+                        <div className="text-sm text-zinc-400">All clear! Aaron has what he needs.</div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* In Progress */}
+                <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-cyan-500">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Clock className="w-5 h-5 text-cyan-500 animate-pulse" />
+                      In Progress
+                      {aaronInProgress.length > 0 && (
+                        <Badge className="ml-2 bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                          {aaronInProgress.length}
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <CardDescription>What Aaron is actively working on</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {aaronInProgress.length > 0 ? (
+                      <div className="space-y-2">
+                        {aaronInProgress.map((task) => (
+                          <div key={task.id} className="p-3 rounded-lg bg-cyan-950/20 border border-cyan-800/30">
+                            <div className="font-medium text-white">{task.title}</div>
+                            {task.description && (
+                              <div className="text-sm text-zinc-400 mt-1">{task.description}</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <div className="text-sm text-zinc-400">Nothing actively in progress</div>
+                        <div className="text-xs text-zinc-500 mt-1">Check the queue below</div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Queue */}
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <FileText className="w-5 h-5 text-zinc-400" />
+                    Queue
+                    <Badge className="ml-2 bg-zinc-700 text-zinc-300 border-zinc-600">
+                      {aaronQueue.length}
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>Tasks assigned to Aaron, not yet started</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {aaronQueue.length > 0 ? (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {aaronQueue.map((task) => (
+                        <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50">
+                          <div className="flex-1">
+                            <div className="text-sm text-zinc-200">{task.title}</div>
+                            {task.urgency && task.urgency !== 'normal' && (
+                              <Badge variant="outline" className={
+                                task.urgency === 'urgent' ? "border-red-500/50 text-red-400 mt-1" :
+                                task.urgency === 'high' ? "border-amber-500/50 text-amber-400 mt-1" :
+                                "border-zinc-600 text-zinc-400 mt-1"
+                              }>
+                                {task.urgency}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6">
+                      <div className="text-sm text-zinc-400">Queue is empty</div>
+                      <div className="text-xs text-zinc-500 mt-1">Assign tasks to Aaron to see them here</div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Aaron's Completed */}
+              <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-emerald-500">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                    Aaron&apos;s Completed
+                    <Badge className="ml-2 bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                      {aaronCompleted.length}
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>What Aaron has finished</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {aaronCompleted.length > 0 ? (
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                      {aaronCompleted.slice(0, 15).map((task) => (
+                        <div key={task.id} className="flex items-center gap-3 p-2 rounded-lg bg-emerald-950/10">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-zinc-300 truncate">{task.title}</div>
+                            <div className="text-xs text-zinc-500">
+                              {formatRelativeTime(task.completed_at || task.updated_at)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {aaronCompleted.length > 15 && (
+                        <div className="text-center pt-2">
+                          <span className="text-xs text-zinc-500">+{aaronCompleted.length - 15} more completed</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6">
+                      <div className="text-sm text-zinc-400">No completed tasks yet</div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
