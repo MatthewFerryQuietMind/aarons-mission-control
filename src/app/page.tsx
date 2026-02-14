@@ -166,6 +166,13 @@ export default function MissionControl() {
   const [loading, setLoading] = useState(true)
   const [captureInput, setCaptureInput] = useState('')
   const [capturing, setCapturing] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  // Show toast helper
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
   
   // Data from Supabase
   const [tasks, setTasks] = useState<Task[]>([])
@@ -296,6 +303,12 @@ export default function MissionControl() {
 
   // Update task status (for quick actions)
   const updateTaskStatus = async (taskId: string, newStatus: string) => {
+    const statusMessages: Record<string, string> = {
+      'done': '✅ Marked complete',
+      'scheduled': '📅 Moved to scheduled',
+      'someday': '⏸️ Moved to someday/later'
+    }
+    
     try {
       const updates: Record<string, unknown> = { 
         status: newStatus,
@@ -313,11 +326,14 @@ export default function MissionControl() {
       
       if (error) {
         console.error('Error updating task:', error)
+        showToast('Failed to update task', 'error')
       } else {
+        showToast(statusMessages[newStatus] || 'Task updated')
         fetchData() // Refresh
       }
     } catch (err) {
       console.error('Task update failed:', err)
+      showToast('Failed to update task', 'error')
     }
   }
 
@@ -450,6 +466,17 @@ export default function MissionControl() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-[100] px-4 py-3 rounded-lg shadow-lg transition-all duration-300 ${
+          toast.type === 'success' 
+            ? 'bg-emerald-900/90 border border-emerald-700 text-emerald-100' 
+            : 'bg-red-900/90 border border-red-700 text-red-100'
+        }`}>
+          {toast.message}
+        </div>
+      )}
+      
       {/* Header */}
       <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
