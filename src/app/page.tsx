@@ -168,11 +168,54 @@ export default function MissionControl() {
   const [captureInput, setCaptureInput] = useState('')
   const [capturing, setCapturing] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [clarityResponses, setClarityResponses] = useState<Record<string, string>>({})
 
   // Show toast helper
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type })
     setTimeout(() => setToast(null), 3000)
+  }
+
+  // Submit clarification and save to task notes
+  const submitClarification = async (taskId: string, response: string) => {
+    if (!response.trim()) {
+      showToast('Please enter your clarification first', 'error')
+      return
+    }
+    
+    try {
+      // Save the clarification to the task notes
+      const task = tasks.find(t => t.id === taskId)
+      const existingNotes = task?.notes || ''
+      const timestamp = new Date().toLocaleString()
+      const newNotes = existingNotes 
+        ? `${existingNotes}\n\n[${timestamp}] Matthew's clarification: ${response}`
+        : `[${timestamp}] Matthew's clarification: ${response}`
+      
+      await supabase
+        .from('tasks')
+        .update({ 
+          notes: newNotes,
+          // Keep needs_clarity true - Aaron will process and either clear it or ask a follow-up
+        })
+        .eq('id', taskId)
+      
+      // Log this as an activity
+      await supabase.from('activity_feed').insert({
+        type: 'clarification',
+        title: `Clarification provided: ${task?.title?.substring(0, 50)}...`,
+        description: response.substring(0, 200),
+        status: 'pending_review'
+      })
+      
+      // Clear the input
+      setClarityResponses(prev => ({ ...prev, [taskId]: '' }))
+      showToast('Clarification saved — Aaron will review and re-sort')
+      fetchData()
+    } catch (err) {
+      console.error('Failed to save clarification:', err)
+      showToast('Failed to save clarification', 'error')
+    }
   }
   
   // Data from Supabase
@@ -680,21 +723,46 @@ export default function MissionControl() {
                 </CardHeader>
                 <CardContent>
                   {needsClarity.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {needsClarity.map((item) => (
                         <div key={item.id} className="p-4 rounded-lg bg-amber-950/20 border border-amber-800/30">
                           <div className="font-medium text-white mb-2">{item.title}</div>
                           {item.clarity_question && (
                             <div className="text-sm text-amber-300 mb-3">❓ {item.clarity_question}</div>
                           )}
-                          <div className="flex flex-wrap gap-2">
+                          
+                          {/* Clarification input */}
+                          <div className="mb-3">
+                            <Input
+                              placeholder="Your answer or context..."
+                              className="bg-zinc-800 border-zinc-700 text-zinc-100 placeholder:text-zinc-500 mb-2"
+                              value={clarityResponses[item.id] || ''}
+                              onChange={(e) => setClarityResponses(prev => ({ ...prev, [item.id]: e.target.value }))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && clarityResponses[item.id]?.trim()) {
+                                  submitClarification(item.id, clarityResponses[item.id])
+                                }
+                              }}
+                            />
+                            {clarityResponses[item.id]?.trim() && (
+                              <Button
+                                size="sm"
+                                className="bg-amber-600 hover:bg-amber-500 text-white text-xs w-full"
+                                onClick={() => submitClarification(item.id, clarityResponses[item.id])}
+                              >
+                                💬 Send Clarification to Aaron
+                              </Button>
+                            )}
+                          </div>
+                          
+                          <div className="flex flex-wrap gap-2 pt-2 border-t border-amber-800/20">
+                            <span className="text-xs text-zinc-500 w-full mb-1">Or quick action:</span>
                             <Button 
                               size="sm" 
                               variant="outline" 
                               className="border-emerald-700 text-emerald-400 text-xs hover:bg-emerald-950/50"
                               onClick={() => {
                                 updateTaskStatus(item.id, 'active')
-                                // Also clear the needs_clarity flag
                                 supabase.from('tasks').update({ needs_clarity: false, assigned_to: 'matthew' }).eq('id', item.id)
                                 showToast('Assigned to Matthew')
                               }}
