@@ -294,6 +294,33 @@ export default function MissionControl() {
     setCapturing(false)
   }
 
+  // Update task status (for quick actions)
+  const updateTaskStatus = async (taskId: string, newStatus: string) => {
+    try {
+      const updates: Record<string, unknown> = { 
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      }
+      
+      if (newStatus === 'done') {
+        updates.completed_at = new Date().toISOString()
+      }
+      
+      const { error } = await supabase
+        .from('tasks')
+        .update(updates)
+        .eq('id', taskId)
+      
+      if (error) {
+        console.error('Error updating task:', error)
+      } else {
+        fetchData() // Refresh
+      }
+    } catch (err) {
+      console.error('Task update failed:', err)
+    }
+  }
+
   // Initial fetch and real-time subscription
   useEffect(() => {
     fetchData()
@@ -532,8 +559,32 @@ export default function MissionControl() {
                             }>
                               {item.urgency}
                             </Badge>
-                            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
-                              Review <ArrowRight className="w-4 h-4 ml-1" />
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/50"
+                              onClick={() => updateTaskStatus(item.id, 'done')}
+                              title="Mark Done"
+                            >
+                              ✅
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="text-amber-400 hover:text-amber-300 hover:bg-amber-950/50"
+                              onClick={() => updateTaskStatus(item.id, 'scheduled')}
+                              title="Schedule for Later"
+                            >
+                              📅
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800"
+                              onClick={() => updateTaskStatus(item.id, 'someday')}
+                              title="Move to Someday"
+                            >
+                              ⏸️
                             </Button>
                           </div>
                         </div>
