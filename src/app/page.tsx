@@ -196,7 +196,9 @@ export default function MissionControl() {
         .from('tasks')
         .update({ 
           notes: newNotes,
-          // Keep needs_clarity true - Aaron will process and either clear it or ask a follow-up
+          needs_clarity: false,  // Remove from Needs Clarity immediately
+          assigned_to: 'aaron', // Assign to Aaron for processing
+          status: 'pending_review'
         })
         .eq('id', taskId)
       
@@ -210,7 +212,7 @@ export default function MissionControl() {
       
       // Clear the input
       setClarityResponses(prev => ({ ...prev, [taskId]: '' }))
-      showToast('Clarification saved — Aaron will review and re-sort')
+      showToast('✅ Sent to Aaron for processing')
       fetchData()
     } catch (err) {
       console.error('Failed to save clarification:', err)
@@ -761,10 +763,10 @@ export default function MissionControl() {
                               size="sm" 
                               variant="outline" 
                               className="border-emerald-700 text-emerald-400 text-xs hover:bg-emerald-950/50"
-                              onClick={() => {
-                                updateTaskStatus(item.id, 'active')
-                                supabase.from('tasks').update({ needs_clarity: false, assigned_to: 'matthew' }).eq('id', item.id)
-                                showToast('Assigned to Matthew')
+                              onClick={async () => {
+                                await supabase.from('tasks').update({ needs_clarity: false, assigned_to: 'matthew', status: 'active' }).eq('id', item.id)
+                                showToast('✅ Assigned to Matthew')
+                                fetchData()
                               }}
                             >
                               🟢 For Me
@@ -773,9 +775,9 @@ export default function MissionControl() {
                               size="sm" 
                               variant="outline" 
                               className="border-cyan-700 text-cyan-400 text-xs hover:bg-cyan-950/50"
-                              onClick={() => {
-                                supabase.from('tasks').update({ needs_clarity: false, assigned_to: 'aaron', status: 'active' }).eq('id', item.id)
-                                showToast('Assigned to Aaron')
+                              onClick={async () => {
+                                await supabase.from('tasks').update({ needs_clarity: false, assigned_to: 'aaron', status: 'active' }).eq('id', item.id)
+                                showToast('✅ Assigned to Aaron')
                                 fetchData()
                               }}
                             >
@@ -785,9 +787,9 @@ export default function MissionControl() {
                               size="sm" 
                               variant="outline" 
                               className="border-zinc-700 text-zinc-400 text-xs hover:bg-zinc-800"
-                              onClick={() => {
-                                supabase.from('tasks').update({ needs_clarity: false, status: 'someday' }).eq('id', item.id)
-                                showToast('Moved to Someday')
+                              onClick={async () => {
+                                await supabase.from('tasks').update({ needs_clarity: false, status: 'someday' }).eq('id', item.id)
+                                showToast('⏸️ Moved to Someday')
                                 fetchData()
                               }}
                             >
@@ -797,9 +799,10 @@ export default function MissionControl() {
                               size="sm" 
                               variant="outline" 
                               className="border-red-800 text-red-400 text-xs hover:bg-red-950/50"
-                              onClick={() => {
-                                updateTaskStatus(item.id, 'killed')
-                                supabase.from('tasks').update({ needs_clarity: false }).eq('id', item.id)
+                              onClick={async () => {
+                                await supabase.from('tasks').update({ needs_clarity: false, status: 'killed' }).eq('id', item.id)
+                                showToast('🗑️ Task killed')
+                                fetchData()
                               }}
                             >
                               🗑️ Kill
