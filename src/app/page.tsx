@@ -158,6 +158,8 @@ export default function MissionControl() {
   const [searchQuery, setSearchQuery] = useState('')
   const [lastRefresh, setLastRefresh] = useState(new Date())
   const [loading, setLoading] = useState(true)
+  const [captureInput, setCaptureInput] = useState('')
+  const [capturing, setCapturing] = useState(false)
   
   // Data from Supabase
   const [tasks, setTasks] = useState<Task[]>([])
@@ -257,6 +259,33 @@ export default function MissionControl() {
     }
     setLoading(false)
     setLastRefresh(new Date())
+  }
+
+  // Quick capture function
+  const handleQuickCapture = async () => {
+    if (!captureInput.trim()) return
+    
+    setCapturing(true)
+    try {
+      const { error } = await supabase
+        .from('captures')
+        .insert({
+          content: captureInput.trim(),
+          type: 'note',
+          source: 'Mission Control',
+          processed: false
+        })
+      
+      if (error) {
+        console.error('Error saving capture:', error)
+      } else {
+        setCaptureInput('')
+        fetchData() // Refresh to show new capture
+      }
+    } catch (err) {
+      console.error('Capture failed:', err)
+    }
+    setCapturing(false)
   }
 
   // Initial fetch and real-time subscription
@@ -1097,17 +1126,29 @@ export default function MissionControl() {
                 </Card>
               </div>
 
-              {/* Quick Capture (placeholder) */}
+              {/* Quick Capture */}
               <Card className="bg-zinc-900 border-zinc-800">
                 <CardContent className="p-4">
                   <div className="flex gap-3">
                     <Input 
                       placeholder="Quick capture — type an idea, insight, or note..."
                       className="flex-1 bg-zinc-800 border-zinc-700 text-zinc-100"
+                      value={captureInput}
+                      onChange={(e) => setCaptureInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          handleQuickCapture()
+                        }
+                      }}
                     />
-                    <Button className="bg-violet-600 hover:bg-violet-700">
+                    <Button 
+                      className="bg-violet-600 hover:bg-violet-700"
+                      onClick={handleQuickCapture}
+                      disabled={capturing || !captureInput.trim()}
+                    >
                       <Lightbulb className="w-4 h-4 mr-2" />
-                      Capture
+                      {capturing ? 'Saving...' : 'Capture'}
                     </Button>
                   </div>
                 </CardContent>
