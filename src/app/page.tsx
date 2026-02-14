@@ -126,6 +126,10 @@ interface PipelineItem {
   probability: number
   next_action: string | null
   next_action_date: string | null
+  contacts?: {
+    name: string
+    email: string | null
+  }
 }
 
 // Static data for cron schedule (will be dynamic later)
@@ -211,10 +215,10 @@ export default function MissionControl() {
         .order('created_at', { ascending: false })
         .limit(20)
       
-      // Fetch pipeline
+      // Fetch pipeline with contact names
       const { data: pipelineData } = await supabase
         .from('pipeline')
-        .select('*')
+        .select('*, contacts(name, email)')
         .order('probability', { ascending: false })
       
       if (tasksData) setTasks(tasksData)
@@ -267,8 +271,25 @@ export default function MissionControl() {
     }
   }, [])
 
-  // Filter tasks awaiting Matthew
-  const awaitingMatthew = tasks.filter(t => t.assigned_to === 'matthew' && t.status === 'pending')
+  // Filter tasks awaiting Matthew - only show if due within 2 days or urgent
+  const now = new Date()
+  const twoDaysFromNow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000)
+  
+  const awaitingMatthew = tasks.filter(t => {
+    if (t.assigned_to !== 'matthew' || t.status !== 'pending') return false
+    // Always show urgent items
+    if (t.priority === 'urgent') return true
+    // Show if due within 2 days
+    if (t.due_date) {
+      const dueDate = new Date(t.due_date)
+      return dueDate <= twoDaysFromNow
+    }
+    // If no due date and not urgent, don't show in "Needs You Now"
+    return false
+  })
+  
+  // All pending tasks for Matthew (for other views)
+  const allPendingForMatthew = tasks.filter(t => t.assigned_to === 'matthew' && t.status === 'pending')
   const aaronTasks = tasks.filter(t => t.assigned_to === 'aaron')
 
   // Get goals by level
@@ -280,13 +301,14 @@ export default function MissionControl() {
   const today = new Date()
   const daysUntilSeptember = Math.ceil((septemberDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
-  // Parse MRR from goals
+  // Parse goals
   const mrrGoal = quarterlyGoals.find(g => g.title.includes('MRR') || g.title.includes('$40k'))
   const clientGoal = quarterlyGoals.find(g => g.title.includes('Client') || g.title.includes('10'))
+  const kristenGoal = quarterlyGoals.find(g => g.title.toLowerCase().includes('kristen'))
   
-  // Extract numeric values from strings like "$21,666"
+  // Extract numeric values from strings like "$21,666" or "60%"
   const extractNumber = (str: string) => {
-    const match = str?.replace(/[$,]/g, '').match(/[\d.]+/)
+    const match = str?.replace(/[$,%]/g, '').match(/[\d.]+/)
     return match ? parseFloat(match[0]) : 0
   }
 
@@ -294,6 +316,8 @@ export default function MissionControl() {
   const targetMRR = 40000
   const currentClients = clientGoal ? extractNumber(clientGoal.current_value) : 6
   const targetClients = 10
+  const currentKristenTime = kristenGoal ? extractNumber(kristenGoal.current_value) : 60
+  const targetKristenTime = 20
 
   // Format time
   const formatTime = (dateStr: string) => {
@@ -510,14 +534,15 @@ export default function MissionControl() {
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span className="text-zinc-400">Kristen&apos;s Time in MFI</span>
-                        <span className="text-white">35% → 20% goal</span>
+                        <span className="text-white">{currentKristenTime}% → {targetKristenTime}% goal</span>
                       </div>
                       <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-violet-500 rounded-full"
-                          style={{ width: '35%' }}
+                          style={{ width: `${currentKristenTime}%` }}
                         />
                       </div>
+                      <div className="text-xs text-zinc-500 mt-1">Need to reduce by {currentKristenTime - targetKristenTime}%</div>
                     </div>
                   </CardContent>
                 </Card>
@@ -538,14 +563,14 @@ export default function MissionControl() {
                       {activePipeline.length > 0 ? activePipeline.slice(0, 5).map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50">
                           <div>
-                            <div className="text-sm font-medium text-white">{item.product}</div>
-                            <div className="text-xs text-zinc-500">{item.next_action || item.stage}</div>
+                            <div className="text-sm font-medium text-white">{item.contacts?.name || 'Unknown'}</div>
+                            <div className="text-xs text-zinc-500">{item.product} • {item.stage}</div>
                           </div>
                           <div className="text-right">
                             <Badge variant="outline" className={
-                              item.stage === 'meeting_booked' || item.stage === 'MEETING-BOOKED'
+                              item.stage === 'MEETING' || item.stage === 'MEETING-BOOKED'
                                 ? "border-emerald-500/50 text-emerald-400"
-                                : item.stage === 'proposal' || item.stage === 'PROPOSAL'
+                                : item.stage === 'NEGOTIATING' || item.stage === 'PROPOSAL'
                                 ? "border-cyan-500/50 text-cyan-400"
                                 : "border-zinc-600 text-zinc-400"
                             }>
