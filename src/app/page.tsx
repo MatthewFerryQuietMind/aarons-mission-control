@@ -33,17 +33,23 @@ import {
 interface Task {
   id: string
   title: string
-  description: string
+  description: string | null
+  type: string
   status: string
-  priority: string
+  urgency: string
   assigned_to: string
   due_date: string | null
+  estimated_minutes: number | null
+  project_id: string | null
+  person: string | null
+  google_task_id: string | null
+  google_list_name: string | null
+  needs_clarity: boolean
+  clarity_question: string | null
+  source: string
+  notes: string | null
   created_at: string
-  metadata?: {
-    link?: string
-    action_type?: string
-    post_content?: string
-  }
+  updated_at: string
 }
 
 interface ActivityItem {
@@ -325,22 +331,41 @@ export default function MissionControl() {
   const now = new Date()
   const twoDaysFromNow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000)
   
+  // Tasks that need Matthew's attention NOW
   const awaitingMatthew = tasks.filter(t => {
-    if (t.assigned_to !== 'matthew' || t.status !== 'pending') return false
+    // Must be assigned to Matthew and not done
+    if (t.assigned_to !== 'matthew') return false
+    if (t.status === 'done' || t.status === 'killed' || t.status === 'someday') return false
+    
     // Always show urgent items
-    if (t.priority === 'urgent') return true
+    if (t.urgency === 'urgent') return true
+    
+    // Show items needing clarity
+    if (t.needs_clarity) return true
+    
     // Show if due within 2 days
     if (t.due_date) {
       const dueDate = new Date(t.due_date)
       return dueDate <= twoDaysFromNow
     }
-    // If no due date and not urgent, don't show in "Needs You Now"
+    
     return false
   })
   
-  // All pending tasks for Matthew (for other views)
-  const allPendingForMatthew = tasks.filter(t => t.assigned_to === 'matthew' && t.status === 'pending')
-  const aaronTasks = tasks.filter(t => t.assigned_to === 'aaron')
+  // All active tasks for Matthew
+  const allActiveForMatthew = tasks.filter(t => 
+    t.assigned_to === 'matthew' && 
+    !['done', 'killed'].includes(t.status)
+  )
+  
+  // Aaron's tasks
+  const aaronTasks = tasks.filter(t => 
+    t.assigned_to === 'aaron' && 
+    !['done', 'killed'].includes(t.status)
+  )
+  
+  // Tasks needing clarity
+  const needsClarity = tasks.filter(t => t.needs_clarity)
 
   // Get goals by level
   const northStar = goals.find(g => g.level === 'north_star')
@@ -501,11 +526,13 @@ export default function MissionControl() {
                           </div>
                           <div className="flex items-center gap-2 ml-4">
                             <Badge variant="outline" className={
-                              item.priority === "urgent" 
+                              item.urgency === "urgent" 
                                 ? "border-red-500/50 text-red-400" 
-                                : "border-amber-500/50 text-amber-400"
+                                : item.urgency === "high"
+                                ? "border-amber-500/50 text-amber-400"
+                                : "border-zinc-600 text-zinc-400"
                             }>
-                              {item.priority}
+                              {item.urgency}
                             </Badge>
                             <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
                               Review <ArrowRight className="w-4 h-4 ml-1" />
@@ -847,7 +874,7 @@ export default function MissionControl() {
                           </span>
                         </div>
                         <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-500">
-                          {task.priority}
+                          {task.urgency || task.status}
                         </Badge>
                       </div>
                     )) : (
