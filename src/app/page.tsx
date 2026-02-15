@@ -645,9 +645,9 @@ export default function MissionControl() {
                       <Users className="w-4 h-4 text-cyan-500" />
                       <span className="text-xs text-zinc-500">Coaching</span>
                     </div>
-                    <div className="text-2xl font-bold text-white">{currentClients}<span className="text-zinc-500 text-lg">/{targetClients}</span></div>
+                    <div className="text-2xl font-bold text-white">7<span className="text-zinc-500 text-lg">/15</span></div>
                     <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
-                      <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${(currentClients / targetClients) * 100}%` }} />
+                      <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${(7 / 15) * 100}%` }} />
                     </div>
                   </CardContent>
                 </Card>
@@ -861,191 +861,183 @@ export default function MissionControl() {
                 </Card>
               </div>
 
-              {/* ===== SUGGESTED ACTIONS ===== */}
+              {/* ===== SUGGESTED ACTIONS (Daily Shuffle for QS 9) ===== */}
               <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-emerald-500">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <ArrowRight className="w-5 h-5 text-emerald-500" />
                     Suggested Actions
+                    <span className="text-xs text-zinc-500 ml-auto">🔀 Refreshed daily</span>
                   </CardTitle>
-                  <CardDescription>Highest-impact next moves</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {/* #1 ALWAYS: Sales & Lead Follow-up */}
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-950/30 border border-emerald-800/30">
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-bold text-black">1</div>
-                        <div>
-                          <div className="font-medium text-white text-sm">Sales & Lead Follow-up</div>
-                          <div className="text-xs text-emerald-400">Your #1 priority — always</div>
-                        </div>
-                      </div>
-                      <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Revenue</Badge>
-                    </div>
-
-                    {/* #2: Based on pipeline */}
-                    {activePipeline.length > 0 && (
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                    {/* Pipeline Follow-ups (actual people) */}
+                    {activePipeline.slice(0, 3).map((item, idx) => (
+                      <div key={item.id} className={`flex items-center justify-between p-3 rounded-lg ${
+                        idx === 0 ? 'bg-emerald-950/30 border border-emerald-800/30' : 'bg-zinc-800/50 border border-zinc-700'
+                      }`}>
                         <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full bg-zinc-600 flex items-center justify-center text-xs font-bold text-white">2</div>
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                            idx === 0 ? 'bg-emerald-500 text-black' : 'bg-zinc-600 text-white'
+                          }`}>{idx + 1}</div>
                           <div>
-                            <div className="font-medium text-white text-sm">Follow up with {activePipeline[0]?.contacts?.name || 'top prospect'}</div>
-                            <div className="text-xs text-zinc-400">{activePipeline[0]?.stage} — {activePipeline[0]?.probability}% probability</div>
+                            <div className="font-medium text-white text-sm">
+                              {item.contacts?.name || 'Unknown'}
+                            </div>
+                            <div className={`text-xs ${idx === 0 ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                              {item.next_action || `${item.stage} — follow up`}
+                            </div>
                           </div>
                         </div>
-                        <Badge variant="outline" className="border-cyan-500/50 text-cyan-400">Pipeline</Badge>
-                      </div>
-                    )}
-
-                    {/* #3: Content or Strategic */}
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-zinc-600 flex items-center justify-center text-xs font-bold text-white">3</div>
-                        <div>
-                          <div className="font-medium text-white text-sm">YouTube Authority Content</div>
-                          <div className="text-xs text-zinc-400">Luminary positioning for September</div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={
+                            idx === 0 ? "border-emerald-500/50 text-emerald-400 text-xs" : "border-zinc-600 text-zinc-400 text-xs"
+                          }>
+                            {item.product}
+                          </Badge>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs">📞</Button>
                         </div>
                       </div>
-                      <Badge variant="outline" className="border-violet-500/50 text-violet-400">Content</Badge>
-                    </div>
+                    ))}
 
-                    {/* #4: AOI Handoff */}
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-zinc-600 flex items-center justify-center text-xs font-bold text-white">4</div>
-                        <div>
-                          <div className="font-medium text-white text-sm">Mike D AOI Handoff Planning</div>
-                          <div className="text-xs text-zinc-400">Revenue share structure, timeline</div>
+                    {/* Daily Strategic Suggestions (shuffled based on day) */}
+                    {(() => {
+                      const strategicItems = [
+                        { title: "YouTube Authority Content", desc: "Record a Luminary video", badge: "Content", color: "violet" },
+                        { title: "Mike D AOI Handoff", desc: "Revenue share discussion", badge: "Strategic", color: "amber" },
+                        { title: "Circle Community Post", desc: "Engage with members", badge: "Community", color: "cyan" },
+                        { title: "Vision Program Planning", desc: "May launch prep", badge: "Product", color: "pink" },
+                        { title: "Vulcan Seven Check-in", desc: "Partnership status", badge: "Partnership", color: "blue" },
+                        { title: "Think Big Card Deck", desc: "April launch prep", badge: "Product", color: "orange" },
+                      ]
+                      // Daily shuffle using day of year as seed
+                      const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000)
+                      const shuffled = [...strategicItems].sort((a, b) => {
+                        const hashA = (a.title.charCodeAt(0) + dayOfYear) % 10
+                        const hashB = (b.title.charCodeAt(0) + dayOfYear) % 10
+                        return hashA - hashB
+                      })
+                      const todayItems = shuffled.slice(0, 2)
+                      
+                      return todayItems.map((item, idx) => (
+                        <div key={item.title} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full bg-zinc-600 flex items-center justify-center text-xs font-bold text-white">
+                              {activePipeline.slice(0, 3).length + idx + 1}
+                            </div>
+                            <div>
+                              <div className="font-medium text-white text-sm">{item.title}</div>
+                              <div className="text-xs text-zinc-400">{item.desc}</div>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className={`border-${item.color}-500/50 text-${item.color}-400 text-xs`}>
+                            {item.badge}
+                          </Badge>
                         </div>
-                      </div>
-                      <Badge variant="outline" className="border-amber-500/50 text-amber-400">Strategic</Badge>
-                    </div>
+                      ))
+                    })()}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* September Countdown + Pipeline */}
+              {/* WHO NEEDS FOLLOW-UP TODAY + Recent Wins */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* September Transformation */}
-                <Card className="bg-zinc-900 border-zinc-800">
+                {/* Who Needs Follow-up Today */}
+                <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-emerald-500">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-lg">
-                      <Target className="w-5 h-5 text-cyan-500" />
-                      September Transformation
+                      <DollarSign className="w-5 h-5 text-emerald-500" />
+                      Who Needs Follow-up Today
+                      <Badge className="ml-auto bg-zinc-800 text-zinc-400 text-xs">{daysUntilSeptember}d to Sept</Badge>
                     </CardTitle>
-                    <CardDescription>{daysUntilSeptember} days remaining</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Overall Progress */}
-                    <div className="p-4 rounded-lg bg-gradient-to-r from-cyan-950/50 to-emerald-950/50 border border-cyan-800/30">
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm text-zinc-300">Overall Progress</span>
-                        <span className="text-sm font-bold text-cyan-400">
-                          {Math.round((currentMRR / targetMRR) * 50 + (currentClients / targetClients) * 50)}%
-                        </span>
-                      </div>
-                      <div className="h-3 bg-zinc-800 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-cyan-500 to-emerald-500 rounded-full transition-all"
-                          style={{ width: `${Math.round((currentMRR / targetMRR) * 50 + (currentClients / targetClients) * 50)}%` }}
-                        />
-                      </div>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {activePipeline.length > 0 ? activePipeline.slice(0, 5).map((item, idx) => (
+                        <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                              idx === 0 ? 'bg-emerald-500 text-black' : 'bg-zinc-700 text-zinc-300'
+                            }`}>{idx + 1}</div>
+                            <div>
+                              <div className="text-sm font-medium text-white">{item.contacts?.name || 'Unknown'}</div>
+                              <div className="text-xs text-zinc-500">
+                                {item.product} • {item.next_action || 'Follow up'}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className={
+                              item.stage === 'MEETING' || item.stage === 'MEETING-BOOKED'
+                                ? "border-emerald-500/50 text-emerald-400 text-xs"
+                                : item.stage === 'NEGOTIATING' || item.stage === 'PROPOSAL'
+                                ? "border-cyan-500/50 text-cyan-400 text-xs"
+                                : "border-zinc-600 text-zinc-400 text-xs"
+                            }>
+                              {item.probability}%
+                            </Badge>
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-emerald-400 hover:bg-emerald-950/50 text-xs">
+                              📞
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-cyan-400 hover:bg-cyan-950/50 text-xs">
+                              📧
+                            </Button>
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="text-center py-6 text-zinc-500">
+                          No active pipeline items. Time to prospect! 🎯
+                        </div>
+                      )}
                     </div>
-
-                    {/* MRR */}
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-zinc-400">Monthly Revenue</span>
-                        <span className="text-white">${currentMRR.toLocaleString()} / ${targetMRR.toLocaleString()}</span>
+                    
+                    {/* Pipeline Summary */}
+                    <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-zinc-800">
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-emerald-400">${Math.round(totalPipelineValue).toLocaleString()}</div>
+                        <div className="text-xs text-zinc-500">Weighted Value</div>
                       </div>
-                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-emerald-500 rounded-full"
-                          style={{ width: `${(currentMRR / targetMRR) * 100}%` }}
-                        />
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-cyan-400">{activePipeline.length}</div>
+                        <div className="text-xs text-zinc-500">Active Deals</div>
                       </div>
-                    </div>
-
-                    {/* Clients */}
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-zinc-400">Coaching Clients</span>
-                        <span className="text-white">{currentClients} / {targetClients}</span>
-                      </div>
-                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-cyan-500 rounded-full"
-                          style={{ width: `${(currentClients / targetClients) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Kristen Time */}
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-zinc-400">Kristen&apos;s Time in MFI</span>
-                        <span className="text-white">{currentKristenTime}% → {targetKristenTime}% goal</span>
-                      </div>
-                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-violet-500 rounded-full"
-                          style={{ width: `${currentKristenTime}%` }}
-                        />
-                      </div>
-                      <div className="text-xs text-zinc-500 mt-1">Need to reduce by {currentKristenTime - targetKristenTime}%</div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Hot Pipeline */}
+                {/* Recent Wins */}
                 <Card className="bg-zinc-900 border-zinc-800">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-lg">
-                      <DollarSign className="w-5 h-5 text-emerald-500" />
-                      Hot Pipeline
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                      Recent Wins 🎉
                     </CardTitle>
-                    <CardDescription>
-                      ${Math.round(totalPipelineValue).toLocaleString()} weighted value
-                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      {activePipeline.length > 0 ? activePipeline.slice(0, 5).map((item) => (
-                        <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50">
+                      {closedWonPipeline.length > 0 ? closedWonPipeline.slice(0, 4).map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-emerald-950/20 border border-emerald-800/20">
                           <div>
                             <div className="text-sm font-medium text-white">{item.contacts?.name || 'Unknown'}</div>
-                            <div className="text-xs text-zinc-500">{item.product} • {item.stage}</div>
+                            <div className="text-xs text-emerald-400">{item.product}</div>
                           </div>
                           <div className="text-right">
-                            <Badge variant="outline" className={
-                              item.stage === 'MEETING' || item.stage === 'MEETING-BOOKED'
-                                ? "border-emerald-500/50 text-emerald-400"
-                                : item.stage === 'NEGOTIATING' || item.stage === 'PROPOSAL'
-                                ? "border-cyan-500/50 text-cyan-400"
-                                : "border-zinc-600 text-zinc-400"
-                            }>
-                              {item.probability}%
-                            </Badge>
                             {item.monthly_value > 0 && (
-                              <div className="text-xs text-zinc-500 mt-1">${item.monthly_value.toLocaleString()}/mo</div>
+                              <div className="text-sm font-bold text-emerald-400">${item.monthly_value.toLocaleString()}/mo</div>
                             )}
                           </div>
                         </div>
                       )) : (
-                        <div className="text-center py-4 text-zinc-500">No active pipeline items</div>
+                        <div className="text-center py-4 text-zinc-500">Close your first deal! 🎯</div>
                       )}
                     </div>
                     
-                    {/* Quick Stats */}
-                    <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-zinc-800">
+                    {/* This Month Stats */}
+                    <div className="mt-4 pt-4 border-t border-zinc-800">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-emerald-400">{closedWonPipeline.length}</div>
-                        <div className="text-xs text-zinc-500">Closed Won</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-cyan-400">{activePipeline.length}</div>
-                        <div className="text-xs text-zinc-500">Active Deals</div>
+                        <div className="text-xs text-zinc-500">Closed This Month</div>
                       </div>
                     </div>
                   </CardContent>
