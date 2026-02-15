@@ -636,187 +636,292 @@ export default function MissionControl() {
 
             {/* ==================== COMMAND TAB (NEW DEFAULT) ==================== */}
             <TabsContent value="command" className="space-y-6">
-              {/* Needs You Now */}
-              <Card className="bg-zinc-900 border-zinc-800">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <AlertCircle className="w-5 h-5 text-red-500" />
-                    Needs You Now
-                    {awaitingMatthew.length > 0 && (
-                      <Badge className="ml-2 bg-red-500/20 text-red-400 border-red-500/30">
-                        {awaitingMatthew.length}
-                      </Badge>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {awaitingMatthew.length > 0 ? (
-                    <div className="space-y-3">
-                      {awaitingMatthew.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
-                          <div className="flex-1">
-                            <div className="font-medium text-white">{item.title}</div>
-                            <div className="text-sm text-zinc-400">{item.description}</div>
-                          </div>
-                          <div className="flex items-center gap-2 ml-4">
-                            <Badge variant="outline" className={
-                              item.urgency === "urgent" 
-                                ? "border-red-500/50 text-red-400" 
-                                : item.urgency === "high"
-                                ? "border-amber-500/50 text-amber-400"
-                                : "border-zinc-600 text-zinc-400"
-                            }>
-                              {item.urgency}
-                            </Badge>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/50"
-                              onClick={() => updateTaskStatus(item.id, 'done')}
-                              title="Mark Done"
-                            >
-                              ✅
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-amber-400 hover:text-amber-300 hover:bg-amber-950/50"
-                              onClick={() => updateTaskStatus(item.id, 'scheduled')}
-                              title="Schedule for Later"
-                            >
-                              📅
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800"
-                              onClick={() => updateTaskStatus(item.id, 'someday')}
-                              title="Move to Someday"
-                            >
-                              ⏸️
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+              {/* ===== TOP PROGRESS BOXES (5 across) ===== */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {/* Coaching Clients */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <Users className="w-4 h-4 text-cyan-500" />
+                      <span className="text-xs text-zinc-500">Coaching</span>
                     </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
-                      <div className="text-lg font-medium text-white">All clear!</div>
-                      <div className="text-sm text-zinc-400">Nothing needs your attention right now.</div>
+                    <div className="text-2xl font-bold text-white">{currentClients}<span className="text-zinc-500 text-lg">/{targetClients}</span></div>
+                    <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
+                      <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${(currentClients / targetClients) * 100}%` }} />
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
-              {/* Needs Clarity */}
-              <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-amber-500">
+                {/* MRR */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <DollarSign className="w-4 h-4 text-emerald-500" />
+                      <span className="text-xs text-zinc-500">MRR</span>
+                    </div>
+                    <div className="text-2xl font-bold text-white">${Math.round(currentMRR/1000)}k<span className="text-zinc-500 text-lg">/$40k</span></div>
+                    <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
+                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(currentMRR / targetMRR) * 100}%` }} />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* AOI */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <Target className="w-4 h-4 text-violet-500" />
+                      <span className="text-xs text-zinc-500">AOI</span>
+                    </div>
+                    <div className="text-2xl font-bold text-white">~50<span className="text-zinc-500 text-lg"> mbrs</span></div>
+                    <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
+                      <div className="h-full bg-violet-500 rounded-full" style={{ width: '100%' }} />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* MJM */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <Brain className="w-4 h-4 text-amber-500" />
+                      <span className="text-xs text-zinc-500">MJM</span>
+                    </div>
+                    <div className="text-2xl font-bold text-white">~20<span className="text-zinc-500 text-lg"> mbrs</span></div>
+                    <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
+                      <div className="h-full bg-amber-500 rounded-full" style={{ width: '100%' }} />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Vision */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <Lightbulb className="w-4 h-4 text-pink-500" />
+                      <span className="text-xs text-zinc-500">Vision</span>
+                    </div>
+                    <div className="text-2xl font-bold text-white">0<span className="text-zinc-500 text-lg">/20</span></div>
+                    <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
+                      <div className="h-full bg-pink-500 rounded-full" style={{ width: '0%' }} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* ===== NEEDS ATTENTION + NEEDS CLARITY (side by side) ===== */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Needs Attention (Urgent Tasks First) */}
+                <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-red-500">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <AlertCircle className="w-5 h-5 text-red-500" />
+                      Needs Attention
+                      {(tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed', 'someday'].includes(t.status)).length + awaitingMatthew.length) > 0 && (
+                        <Badge className="ml-2 bg-red-500/20 text-red-400 border-red-500/30">
+                          {tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed', 'someday'].includes(t.status)).length + awaitingMatthew.filter(t => t.urgency !== 'urgent').length}
+                        </Badge>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {/* PART 1: Urgent Tasks from Task List */}
+                    {tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed', 'someday'].includes(t.status)).length > 0 && (
+                      <div className="mb-4">
+                        <div className="text-xs text-red-400 font-semibold mb-2 uppercase tracking-wide">🔴 Urgent Tasks</div>
+                        <div className="space-y-2">
+                          {tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed', 'someday'].includes(t.status)).map((item) => (
+                            <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-red-950/30 border border-red-800/30">
+                              <div className="flex-1">
+                                <div className="font-medium text-white text-sm">{item.title}</div>
+                                {item.due_date && (
+                                  <div className="text-xs text-red-400 mt-1">Due: {new Date(item.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 ml-2">
+                                <Button size="sm" variant="ghost" className="text-emerald-400 hover:bg-emerald-950/50 h-7 w-7 p-0" onClick={() => updateTaskStatus(item.id, 'done')} title="Done">✅</Button>
+                                <Button size="sm" variant="ghost" className="text-amber-400 hover:bg-amber-950/50 h-7 w-7 p-0" onClick={() => updateTaskStatus(item.id, 'scheduled')} title="Schedule">📅</Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PART 2: Strategic Items (Mike D, Vulcan 7, etc) */}
+                    {awaitingMatthew.filter(t => t.urgency !== 'urgent').length > 0 && (
+                      <div>
+                        <div className="text-xs text-zinc-400 font-semibold mb-2 uppercase tracking-wide">📌 Strategic Items</div>
+                        <div className="space-y-2">
+                          {awaitingMatthew.filter(t => t.urgency !== 'urgent').map((item) => (
+                            <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                              <div className="flex-1">
+                                <div className="font-medium text-white text-sm">{item.title}</div>
+                                {item.description && <div className="text-xs text-zinc-400 mt-1">{item.description}</div>}
+                              </div>
+                              <div className="flex items-center gap-1 ml-2">
+                                <Badge variant="outline" className="border-zinc-600 text-zinc-400 text-xs">{item.urgency}</Badge>
+                                <Button size="sm" variant="ghost" className="text-emerald-400 hover:bg-emerald-950/50 h-7 w-7 p-0" onClick={() => updateTaskStatus(item.id, 'done')} title="Done">✅</Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Empty State */}
+                    {tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed', 'someday'].includes(t.status)).length === 0 && 
+                     awaitingMatthew.filter(t => t.urgency !== 'urgent').length === 0 && (
+                      <div className="text-center py-6">
+                        <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+                        <div className="text-sm text-zinc-400">All clear! Nothing urgent.</div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Needs Clarity (side-by-side with Needs Attention) */}
+                <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-amber-500">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <AlertCircle className="w-5 h-5 text-amber-500" />
+                      Needs Clarity
+                      {needsClarity.length > 0 && (
+                        <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">
+                          {needsClarity.length}
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <CardDescription>Items Aaron couldn&apos;t fully categorize — quick answers needed</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[280px]">
+                      {needsClarity.length > 0 ? (
+                        <div className="space-y-4 pr-2">
+                          {needsClarity.map((item) => (
+                            <div key={item.id} className="p-4 rounded-lg bg-amber-950/20 border border-amber-800/30">
+                              <div className="font-medium text-white mb-2 text-sm">{item.title}</div>
+                              {item.clarity_question && (
+                                <div className="text-sm text-amber-300 mb-3">❓ {item.clarity_question}</div>
+                              )}
+                              
+                              {/* Clarification input */}
+                              <div className="mb-3">
+                                <Input
+                                  placeholder="Your answer or context..."
+                                  className="bg-zinc-800 border-zinc-700 text-zinc-100 placeholder:text-zinc-500 mb-2 text-sm"
+                                  value={clarityResponses[item.id] || ''}
+                                  onChange={(e) => setClarityResponses(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && clarityResponses[item.id]?.trim()) {
+                                      submitClarification(item.id, clarityResponses[item.id])
+                                    }
+                                  }}
+                                />
+                                {clarityResponses[item.id]?.trim() && (
+                                  <Button
+                                    size="sm"
+                                    className="bg-amber-600 hover:bg-amber-500 text-white text-xs w-full"
+                                    onClick={() => submitClarification(item.id, clarityResponses[item.id])}
+                                  >
+                                    💬 Send to Aaron
+                                  </Button>
+                                )}
+                              </div>
+                              
+                              <div className="flex flex-wrap gap-1 pt-2 border-t border-amber-800/20">
+                                <Button size="sm" variant="outline" className="border-emerald-700 text-emerald-400 text-xs hover:bg-emerald-950/50 h-7"
+                                  onClick={async () => { await supabase.from('tasks').update({ needs_clarity: false, assigned_to: 'matthew', status: 'active' }).eq('id', item.id); showToast('✅ For Matthew'); fetchData() }}>
+                                  🟢 Me
+                                </Button>
+                                <Button size="sm" variant="outline" className="border-cyan-700 text-cyan-400 text-xs hover:bg-cyan-950/50 h-7"
+                                  onClick={async () => { await supabase.from('tasks').update({ needs_clarity: false, assigned_to: 'aaron', status: 'active' }).eq('id', item.id); showToast('✅ For Aaron'); fetchData() }}>
+                                  🔵 Aaron
+                                </Button>
+                                <Button size="sm" variant="outline" className="border-zinc-700 text-zinc-400 text-xs hover:bg-zinc-800 h-7"
+                                  onClick={async () => { await supabase.from('tasks').update({ needs_clarity: false, status: 'someday' }).eq('id', item.id); showToast('⏸️ Later'); fetchData() }}>
+                                  ⏸️
+                                </Button>
+                                <Button size="sm" variant="outline" className="border-red-800 text-red-400 text-xs hover:bg-red-950/50 h-7"
+                                  onClick={async () => { await supabase.from('tasks').update({ needs_clarity: false, status: 'killed' }).eq('id', item.id); showToast('🗑️ Killed'); fetchData() }}>
+                                  🗑️
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-6">
+                          <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+                          <div className="text-sm text-zinc-400">All clear! Everything is categorized.</div>
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* ===== SUGGESTED ACTIONS ===== */}
+              <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-emerald-500">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <AlertCircle className="w-5 h-5 text-amber-500" />
-                    Needs Clarity
-                    {needsClarity.length > 0 && (
-                      <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">
-                        {needsClarity.length}
-                      </Badge>
-                    )}
+                    <ArrowRight className="w-5 h-5 text-emerald-500" />
+                    Suggested Actions
                   </CardTitle>
-                  <CardDescription>Items Aaron couldn&apos;t fully categorize — quick answers needed</CardDescription>
+                  <CardDescription>Highest-impact next moves</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {needsClarity.length > 0 ? (
-                    <div className="space-y-4">
-                      {needsClarity.map((item) => (
-                        <div key={item.id} className="p-4 rounded-lg bg-amber-950/20 border border-amber-800/30">
-                          <div className="font-medium text-white mb-2">{item.title}</div>
-                          {item.clarity_question && (
-                            <div className="text-sm text-amber-300 mb-3">❓ {item.clarity_question}</div>
-                          )}
-                          
-                          {/* Clarification input */}
-                          <div className="mb-3">
-                            <Input
-                              placeholder="Your answer or context..."
-                              className="bg-zinc-800 border-zinc-700 text-zinc-100 placeholder:text-zinc-500 mb-2"
-                              value={clarityResponses[item.id] || ''}
-                              onChange={(e) => setClarityResponses(prev => ({ ...prev, [item.id]: e.target.value }))}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && clarityResponses[item.id]?.trim()) {
-                                  submitClarification(item.id, clarityResponses[item.id])
-                                }
-                              }}
-                            />
-                            {clarityResponses[item.id]?.trim() && (
-                              <Button
-                                size="sm"
-                                className="bg-amber-600 hover:bg-amber-500 text-white text-xs w-full"
-                                onClick={() => submitClarification(item.id, clarityResponses[item.id])}
-                              >
-                                💬 Send Clarification to Aaron
-                              </Button>
-                            )}
-                          </div>
-                          
-                          <div className="flex flex-wrap gap-2 pt-2 border-t border-amber-800/20">
-                            <span className="text-xs text-zinc-500 w-full mb-1">Or quick action:</span>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="border-emerald-700 text-emerald-400 text-xs hover:bg-emerald-950/50"
-                              onClick={async () => {
-                                await supabase.from('tasks').update({ needs_clarity: false, assigned_to: 'matthew', status: 'active' }).eq('id', item.id)
-                                showToast('✅ Assigned to Matthew')
-                                fetchData()
-                              }}
-                            >
-                              🟢 For Me
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="border-cyan-700 text-cyan-400 text-xs hover:bg-cyan-950/50"
-                              onClick={async () => {
-                                await supabase.from('tasks').update({ needs_clarity: false, assigned_to: 'aaron', status: 'active' }).eq('id', item.id)
-                                showToast('✅ Assigned to Aaron')
-                                fetchData()
-                              }}
-                            >
-                              🔵 For Aaron
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="border-zinc-700 text-zinc-400 text-xs hover:bg-zinc-800"
-                              onClick={async () => {
-                                await supabase.from('tasks').update({ needs_clarity: false, status: 'someday' }).eq('id', item.id)
-                                showToast('⏸️ Moved to Someday')
-                                fetchData()
-                              }}
-                            >
-                              ⏸️ Later
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="border-red-800 text-red-400 text-xs hover:bg-red-950/50"
-                              onClick={async () => {
-                                await supabase.from('tasks').update({ needs_clarity: false, status: 'killed' }).eq('id', item.id)
-                                showToast('🗑️ Task killed')
-                                fetchData()
-                              }}
-                            >
-                              🗑️ Kill
-                            </Button>
+                  <div className="space-y-2">
+                    {/* #1 ALWAYS: Sales & Lead Follow-up */}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-950/30 border border-emerald-800/30">
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-bold text-black">1</div>
+                        <div>
+                          <div className="font-medium text-white text-sm">Sales & Lead Follow-up</div>
+                          <div className="text-xs text-emerald-400">Your #1 priority — always</div>
+                        </div>
+                      </div>
+                      <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Revenue</Badge>
+                    </div>
+
+                    {/* #2: Based on pipeline */}
+                    {activePipeline.length > 0 && (
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-full bg-zinc-600 flex items-center justify-center text-xs font-bold text-white">2</div>
+                          <div>
+                            <div className="font-medium text-white text-sm">Follow up with {activePipeline[0]?.contacts?.name || 'top prospect'}</div>
+                            <div className="text-xs text-zinc-400">{activePipeline[0]?.stage} — {activePipeline[0]?.probability}% probability</div>
                           </div>
                         </div>
-                      ))}
+                        <Badge variant="outline" className="border-cyan-500/50 text-cyan-400">Pipeline</Badge>
+                      </div>
+                    )}
+
+                    {/* #3: Content or Strategic */}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-zinc-600 flex items-center justify-center text-xs font-bold text-white">3</div>
+                        <div>
+                          <div className="font-medium text-white text-sm">YouTube Authority Content</div>
+                          <div className="text-xs text-zinc-400">Luminary positioning for September</div>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="border-violet-500/50 text-violet-400">Content</Badge>
                     </div>
-                  ) : (
-                    <div className="text-center py-6">
-                      <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
-                      <div className="text-sm text-zinc-400">All clear! Everything is categorized.</div>
+
+                    {/* #4: AOI Handoff */}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-zinc-600 flex items-center justify-center text-xs font-bold text-white">4</div>
+                        <div>
+                          <div className="font-medium text-white text-sm">Mike D AOI Handoff Planning</div>
+                          <div className="text-xs text-zinc-400">Revenue share structure, timeline</div>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="border-amber-500/50 text-amber-400">Strategic</Badge>
                     </div>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1348,11 +1453,18 @@ export default function MissionControl() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Cron Schedule */}
                 <Card className="lg:col-span-2 bg-zinc-900 border-zinc-800">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-cyan-500" />
-                      Cron Schedule This Week
-                    </CardTitle>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-cyan-500" />
+                        Cron Schedule This Week
+                      </CardTitle>
+                    </div>
+                    <a href="/cron">
+                      <Button variant="outline" size="sm" className="border-zinc-700 text-zinc-400 hover:text-white">
+                        View All →
+                      </Button>
+                    </a>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-7 gap-2">
