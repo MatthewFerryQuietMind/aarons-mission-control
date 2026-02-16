@@ -1076,60 +1076,78 @@ export default function MissionControl() {
                   </CardContent>
                 </Card>
 
-                {/* Aaron Status (1/3) */}
-                <Card className="bg-zinc-900 border-zinc-800">
+                {/* September Score (1/3) */}
+                <Card className="bg-zinc-900 border-zinc-800 border-t-4 border-t-cyan-500">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-lg">
-                      <Zap className="w-5 h-5 text-amber-500" />
-                      Aaron Status
+                      <Target className="w-5 h-5 text-cyan-500" />
+                      September Score
+                      <Badge className="ml-auto bg-cyan-500/20 text-cyan-400 text-xs">{daysUntilSeptember}d left</Badge>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Trust Level */}
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-zinc-400">Trust Level</span>
-                        <span className="text-amber-400 font-medium">TIER 2</span>
+                  <CardContent className="space-y-3">
+                    {/* Overall Score */}
+                    <div className="text-center p-3 rounded-lg bg-gradient-to-r from-cyan-950/50 to-emerald-950/50 border border-cyan-800/30">
+                      <div className="text-3xl font-bold text-cyan-400">
+                        {Math.round(
+                          (currentMRR / targetMRR) * 25 + 
+                          (7 / 15) * 25 + 
+                          ((100 - currentKristenTime) / (100 - targetKristenTime)) * 20 +
+                          (activePipeline.length > 0 ? 15 : 5) +
+                          (6 / 300) * 15
+                        )}
+                        <span className="text-lg text-zinc-400">/100</span>
                       </div>
-                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-amber-500 rounded-full" style={{ width: '65%' }} />
-                      </div>
-                      <div className="text-xs text-zinc-500 mt-1">Execute with approval</div>
+                      <div className="text-xs text-zinc-400 mt-1">Transformation Progress</div>
                     </div>
 
-                    {/* Today's Stats */}
-                    <div className="pt-3 border-t border-zinc-800">
-                      <div className="text-sm text-zinc-400 mb-2">Today</div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="p-2 rounded bg-zinc-800/50 text-center">
-                          <div className="text-lg font-bold text-white">
-                            {activities.filter(a => {
-                              const actDate = new Date(a.created_at).toDateString()
-                              return actDate === new Date().toDateString()
-                            }).length}
+                    {/* Breakdown */}
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-400">Revenue</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(currentMRR / targetMRR) * 100}%` }} />
                           </div>
-                          <div className="text-xs text-zinc-500">Actions</div>
-                        </div>
-                        <div className="p-2 rounded bg-zinc-800/50 text-center">
-                          <div className="text-lg font-bold text-white">
-                            {activities.filter(a => {
-                              const actDate = new Date(a.created_at).toDateString()
-                              return actDate === new Date().toDateString() && a.type === 'email'
-                            }).length}
-                          </div>
-                          <div className="text-xs text-zinc-500">Emails</div>
+                          <span className="text-zinc-300 w-8">{Math.round((currentMRR / targetMRR) * 100)}%</span>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Decisions */}
-                    <div className="pt-3 border-t border-zinc-800">
-                      <div className="text-sm text-zinc-400 mb-2">Recent Decisions</div>
-                      {decisions.slice(0, 2).map(d => (
-                        <div key={d.id} className="text-xs text-zinc-300 py-1 border-b border-zinc-800 last:border-0">
-                          {d.title}
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-400">Clients</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${(7 / 15) * 100}%` }} />
+                          </div>
+                          <span className="text-zinc-300 w-8">{Math.round((7 / 15) * 100)}%</span>
                         </div>
-                      ))}
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-400">Kristen</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-violet-500 rounded-full" style={{ width: `${((100 - currentKristenTime) / (100 - targetKristenTime)) * 100}%` }} />
+                          </div>
+                          <span className="text-zinc-300 w-8">{Math.round(((100 - currentKristenTime) / (100 - targetKristenTime)) * 100)}%</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-400">Pipeline</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-amber-500 rounded-full" style={{ width: activePipeline.length > 0 ? '100%' : '33%' }} />
+                          </div>
+                          <span className="text-zinc-300 w-8">{activePipeline.length > 0 ? '✓' : '—'}</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center pt-1 border-t border-zinc-800">
+                        <span className="text-zinc-400">🤖 Automated</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-pink-500 rounded-full" style={{ width: `${(6 / 300) * 100}%` }} />
+                          </div>
+                          <span className="text-zinc-300 w-8">6/300</span>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -1138,144 +1156,136 @@ export default function MissionControl() {
 
             {/* ==================== TASKS TAB (FULL LIST) ==================== */}
             <TabsContent value="tasks" className="space-y-6">
-              <Card className="bg-zinc-900 border-zinc-800">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    📋 All Tasks
-                    <Badge variant="outline" className="ml-2 border-zinc-700 text-zinc-400">
-                      {tasks.filter(t => !['done', 'killed'].includes(t.status)).length} active
+              {/* DO NOW - Priority Tasks */}
+              <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-emerald-500">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    ⚡ Do Now
+                    <Badge className="ml-2 bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                      {tasks.filter(t => t.urgency === 'urgent' && t.assigned_to === 'matthew' && !['done', 'killed', 'someday'].includes(t.status)).length}
                     </Badge>
                   </CardTitle>
-                  <CardDescription>Full task list from Google Tasks — everything in one place</CardDescription>
+                  <CardDescription>Your top priorities — click to take action</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {/* Task Sections */}
-                  <div className="space-y-6">
-                    {/* Urgent */}
-                    {tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed'].includes(t.status)).length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold text-red-400 mb-3 flex items-center gap-2">
-                          🔴 URGENT ({tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed'].includes(t.status)).length})
-                        </h3>
-                        <div className="space-y-2">
-                          {tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed'].includes(t.status)).map(task => (
-                            <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-red-950/20 border border-red-800/30">
+                  <div className="space-y-2">
+                    {tasks.filter(t => t.urgency === 'urgent' && t.assigned_to === 'matthew' && !['done', 'killed', 'someday'].includes(t.status)).length > 0 ? (
+                      tasks.filter(t => t.urgency === 'urgent' && t.assigned_to === 'matthew' && !['done', 'killed', 'someday'].includes(t.status)).map((task, idx) => (
+                        <div key={task.id} className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-800/30">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3 flex-1">
+                              <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-bold text-black shrink-0 mt-0.5">{idx + 1}</div>
                               <div className="flex-1">
-                                <div className="text-sm text-white">{task.title}</div>
+                                <div className="text-sm font-medium text-white">{task.title}</div>
+                                {task.notes && (
+                                  <div className="text-xs text-zinc-400 mt-1 p-2 bg-zinc-800/50 rounded">📝 {task.notes}</div>
+                                )}
                                 <div className="text-xs text-zinc-500 mt-1">
-                                  {task.assigned_to === 'matthew' ? '🟢' : '🔵'} {task.assigned_to}
-                                  {task.google_list_name && ` • ${task.google_list_name}`}
+                                  {task.person && `${task.person} • `}{task.due_date && `Due ${new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
                                 </div>
                               </div>
-                              {task.due_date && (
-                                <Badge variant="outline" className="border-red-500/50 text-red-400 text-xs">
-                                  {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                </Badge>
+                            </div>
+                            <div className="flex items-center gap-1 ml-2">
+                              <Button size="sm" variant="ghost" className="h-8 px-2 text-emerald-400 hover:bg-emerald-950/50" onClick={() => updateTaskStatus(task.id, 'done')} title="Mark Done">✓ Done</Button>
+                              <Button size="sm" variant="ghost" className="h-8 px-2 text-amber-400 hover:bg-amber-950/50" onClick={() => updateTaskStatus(task.id, 'scheduled')} title="Schedule">📅</Button>
+                              <Button size="sm" variant="ghost" className="h-8 px-2 text-zinc-400 hover:bg-zinc-800" onClick={() => updateTaskStatus(task.id, 'someday')} title="Pause">⏸️</Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-6">
+                        <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+                        <div className="text-sm text-zinc-400">No urgent tasks! Promote tasks from below.</div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* ALL TASKS - Expandable Full List */}
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      📋 All Tasks
+                      <Badge variant="outline" className="ml-2 border-zinc-700 text-zinc-400">
+                        {tasks.filter(t => !['done', 'killed'].includes(t.status)).length} active
+                      </Badge>
+                    </CardTitle>
+                    <div className="flex gap-2">
+                      <Input placeholder="Search..." className="w-40 h-8 text-xs bg-zinc-800 border-zinc-700" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    <div className="space-y-2 pr-2">
+                      {tasks.filter(t => !['done', 'killed'].includes(t.status) && !(t.urgency === 'urgent' && t.assigned_to === 'matthew')).map(task => (
+                        <div key={task.id} className="p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors group">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className={task.assigned_to === 'matthew' ? 'text-emerald-400' : 'text-cyan-400'}>
+                                  {task.assigned_to === 'matthew' ? '🟢' : '🔵'}
+                                </span>
+                                <span className="text-sm text-white">{task.title}</span>
+                              </div>
+                              {task.notes && (
+                                <div className="text-xs text-zinc-400 mt-1 ml-6 p-2 bg-zinc-900/50 rounded">📝 {task.notes}</div>
                               )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Matthew's Tasks */}
-                    <div>
-                      <h3 className="text-sm font-semibold text-emerald-400 mb-3 flex items-center gap-2">
-                        🟢 MATTHEW ({allActiveForMatthew.length})
-                      </h3>
-                      <div className="space-y-2 max-h-80 overflow-y-auto">
-                        {allActiveForMatthew.filter(t => t.urgency !== 'urgent').map(task => (
-                          <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors">
-                            <div className="flex-1">
-                              <div className="text-sm text-white">{task.title}</div>
-                              <div className="text-xs text-zinc-500 mt-1">
-                                {task.status}
-                                {task.person && ` • ${task.person}`}
-                                {task.google_list_name && ` • ${task.google_list_name}`}
+                              <div className="text-xs text-zinc-500 mt-1 ml-6">
+                                {task.status}{task.person && ` • ${task.person}`}{task.google_list_name && ` • ${task.google_list_name}`}
                               </div>
                             </div>
-                            <Badge variant="outline" className={
-                              task.urgency === 'high' ? "border-amber-500/50 text-amber-400" : "border-zinc-700 text-zinc-500"
-                            }>
-                              {task.urgency}
-                            </Badge>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-red-400 hover:bg-red-950/50 text-xs" 
+                                onClick={async () => { await supabase.from('tasks').update({ urgency: 'urgent' }).eq('id', task.id); showToast('⚡ Moved to Do Now'); fetchData() }}>
+                                → Do Now
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-emerald-400 hover:bg-emerald-950/50 text-xs" onClick={() => updateTaskStatus(task.id, 'done')}>✓</Button>
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-zinc-400 hover:bg-zinc-800 text-xs" onClick={() => updateTaskStatus(task.id, 'someday')}>⏸️</Button>
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Aaron's Tasks */}
-                    <div>
-                      <h3 className="text-sm font-semibold text-cyan-400 mb-3 flex items-center gap-2">
-                        🔵 AARON ({aaronTasks.length})
-                      </h3>
-                      <div className="space-y-2 max-h-80 overflow-y-auto">
-                        {aaronTasks.map(task => (
-                          <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors">
-                            <div className="flex-1">
-                              <div className="text-sm text-white">{task.title}</div>
-                              <div className="text-xs text-zinc-500 mt-1">
-                                {task.status}
-                                {task.type !== 'task' && ` • ${task.type}`}
-                              </div>
-                            </div>
-                            <Badge variant="outline" className="border-zinc-700 text-zinc-500">
-                              {task.urgency}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Someday/Later */}
-                    {tasks.filter(t => t.status === 'someday').length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold text-zinc-500 mb-3 flex items-center gap-2">
-                          ⏸️ SOMEDAY/LATER ({tasks.filter(t => t.status === 'someday').length})
-                        </h3>
-                        <div className="space-y-2 max-h-60 overflow-y-auto">
-                          {tasks.filter(t => t.status === 'someday').map(task => (
-                            <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/30">
-                              <div className="flex-1">
-                                <div className="text-sm text-zinc-400">{task.title}</div>
-                                <div className="text-xs text-zinc-600 mt-1">
-                                  {task.assigned_to === 'matthew' ? '🟢' : '🔵'} {task.assigned_to}
-                                  {task.type !== 'task' && ` • ${task.type}`}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
                         </div>
-                      </div>
-                    )}
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
 
-                    {/* Completed */}
-                    <div>
-                      <h3 className="text-sm font-semibold text-emerald-400 mb-3 flex items-center gap-2">
-                        ✅ COMPLETED ({completedTasks.length})
-                      </h3>
-                      <div className="space-y-2 max-h-80 overflow-y-auto">
-                        {completedTasks.length > 0 ? completedTasks.slice(0, 20).map(task => (
-                          <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-emerald-950/10 hover:bg-emerald-950/20 transition-colors">
-                            <div className="flex-1">
-                              <div className="text-sm text-zinc-300">{task.title}</div>
-                              <div className="text-xs text-zinc-500 mt-1">
-                                {task.assigned_to === 'matthew' ? '🟢' : '🔵'} {task.assigned_to}
-                                {' • '}{formatRelativeTime(task.completed_at || task.updated_at)}
-                              </div>
-                            </div>
+              {/* COMPLETED - Collapsible */}
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader className="pb-3 cursor-pointer hover:bg-zinc-800/50 rounded-t-lg transition-colors">
+                  <CardTitle className="flex items-center justify-between text-lg">
+                    <div className="flex items-center gap-2">
+                      ✅ Completed
+                      <Badge variant="outline" className="ml-2 border-emerald-500/30 text-emerald-400">
+                        {completedTasks.length}
+                      </Badge>
+                    </div>
+                    <span className="text-xs text-zinc-500">Click to expand</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <ScrollArea className="h-[300px]">
+                    <div className="space-y-1 pr-2">
+                      {completedTasks.map(task => (
+                        <div key={task.id} className="flex items-center justify-between p-2 rounded bg-emerald-950/10 hover:bg-emerald-950/20 transition-colors">
+                          <div className="flex items-center gap-2 flex-1">
                             <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                            <span className="text-sm text-zinc-400">{task.title}</span>
                           </div>
-                        )) : (
-                          <div className="text-center py-4 text-zinc-500">No completed tasks yet</div>
-                        )}
-                        {completedTasks.length > 20 && (
-                          <div className="text-center pt-2">
-                            <span className="text-xs text-zinc-500">Showing 20 of {completedTasks.length} completed</span>
-                          </div>
-                        )}
-                      </div>
+                          <span className="text-xs text-zinc-600">{formatRelativeTime(task.completed_at || task.updated_at)}</span>
+                        </div>
+                      ))}
+                      {completedTasks.length === 0 && (
+                        <div className="text-center py-4 text-zinc-500">No completed tasks yet</div>
+                      )}
                     </div>
+                  </ScrollArea>
+                  <div className="text-center pt-3 border-t border-zinc-800 mt-3">
+                    <span className="text-xs text-zinc-500">📦 All {completedTasks.length} completed tasks preserved forever</span>
                   </div>
                 </CardContent>
               </Card>
