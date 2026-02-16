@@ -169,6 +169,10 @@ export default function MissionControl() {
   const [capturing, setCapturing] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [clarityResponses, setClarityResponses] = useState<Record<string, string>>({})
+  const [editingTask, setEditingTask] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editNotes, setEditNotes] = useState('')
+  const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({})
 
   // Show toast helper
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -380,6 +384,73 @@ export default function MissionControl() {
     } catch (err) {
       console.error('Task update failed:', err)
       showToast('Failed to update task', 'error')
+    }
+  }
+
+  // Start editing a task
+  const startEditTask = (task: Task) => {
+    setEditingTask(task.id)
+    setEditTitle(task.title)
+    setEditNotes(task.notes || '')
+  }
+
+  // Save task edits
+  const saveTaskEdit = async (taskId: string) => {
+    try {
+      const timestamp = new Date().toLocaleString()
+      const task = tasks.find(t => t.id === taskId)
+      
+      // Log edit to activity feed
+      await supabase.from('activity_feed').insert({
+        type: 'task_edit',
+        title: `Task edited: ${editTitle.substring(0, 50)}`,
+        description: `Matthew updated task. Notes: ${editNotes.substring(0, 100)}...`,
+        status: 'completed'
+      })
+      
+      await supabase
+        .from('tasks')
+        .update({ 
+          title: editTitle,
+          notes: editNotes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', taskId)
+      
+      setEditingTask(null)
+      showToast('✅ Task updated')
+      fetchData()
+    } catch (err) {
+      console.error('Failed to save task edit:', err)
+      showToast('Failed to save changes', 'error')
+    }
+  }
+
+  // Promote task to Do Now (urgent)
+  const promoteToDoNow = async (taskId: string) => {
+    try {
+      await supabase
+        .from('tasks')
+        .update({ 
+          urgency: 'urgent',
+          assigned_to: 'matthew',
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', taskId)
+      
+      await supabase.from('activity_feed').insert({
+        type: 'task_priority',
+        title: `Task promoted to Do Now`,
+        description: `Matthew prioritized a task`,
+        status: 'completed'
+      })
+      
+      showToast('⚡ Added to Do Now')
+      fetchData()
+    } catch (err) {
+      console.error('Failed to promote task:', err)
+      showToast('Failed to promote task', 'error')
     }
   }
 
@@ -1090,10 +1161,10 @@ export default function MissionControl() {
                     <div className="text-center p-3 rounded-lg bg-gradient-to-r from-cyan-950/50 to-emerald-950/50 border border-cyan-800/30">
                       <div className="text-3xl font-bold text-cyan-400">
                         {Math.round(
-                          (currentMRR / targetMRR) * 25 + 
-                          (7 / 15) * 25 + 
+                          (currentMRR / 100000) * 25 + 
+                          (7 / 15) * 20 + 
+                          (0 / 20) * 20 +
                           ((100 - currentKristenTime) / (100 - targetKristenTime)) * 20 +
-                          (activePipeline.length > 0 ? 15 : 5) +
                           (6 / 300) * 15
                         )}
                         <span className="text-lg text-zinc-400">/100</span>
@@ -1104,48 +1175,48 @@ export default function MissionControl() {
                     {/* Breakdown */}
                     <div className="space-y-2 text-xs">
                       <div className="flex justify-between items-center">
-                        <span className="text-zinc-400">Revenue</span>
+                        <span className="text-zinc-400">💰 Revenue</span>
                         <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(currentMRR / targetMRR) * 100}%` }} />
+                          <div className="w-12 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(currentMRR / 100000) * 100}%` }} />
                           </div>
-                          <span className="text-zinc-300 w-8">{Math.round((currentMRR / targetMRR) * 100)}%</span>
+                          <span className="text-zinc-300 w-12 text-right">${Math.round(currentMRR/1000)}k/$100k</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-zinc-400">Clients</span>
+                        <span className="text-zinc-400">🎯 1-on-1</span>
                         <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                          <div className="w-12 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                             <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${(7 / 15) * 100}%` }} />
                           </div>
-                          <span className="text-zinc-300 w-8">{Math.round((7 / 15) * 100)}%</span>
+                          <span className="text-zinc-300 w-12 text-right">7/15</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-zinc-400">Kristen</span>
+                        <span className="text-zinc-400">👁️ Vision</span>
                         <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                          <div className="w-12 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-pink-500 rounded-full" style={{ width: `${(0 / 20) * 100}%` }} />
+                          </div>
+                          <span className="text-zinc-300 w-12 text-right">0/20</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-400">👩 Kristen</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-12 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                             <div className="h-full bg-violet-500 rounded-full" style={{ width: `${((100 - currentKristenTime) / (100 - targetKristenTime)) * 100}%` }} />
                           </div>
-                          <span className="text-zinc-300 w-8">{Math.round(((100 - currentKristenTime) / (100 - targetKristenTime)) * 100)}%</span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-zinc-400">Pipeline</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-amber-500 rounded-full" style={{ width: activePipeline.length > 0 ? '100%' : '33%' }} />
-                          </div>
-                          <span className="text-zinc-300 w-8">{activePipeline.length > 0 ? '✓' : '—'}</span>
+                          <span className="text-zinc-300 w-12 text-right">{currentKristenTime}%→20%</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center pt-1 border-t border-zinc-800">
-                        <span className="text-zinc-400">🤖 Automated</span>
+                        <span className="text-zinc-400">🤖 Auto</span>
                         <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-pink-500 rounded-full" style={{ width: `${(6 / 300) * 100}%` }} />
+                          <div className="w-12 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-amber-500 rounded-full" style={{ width: `${(6 / 300) * 100}%` }} />
                           </div>
-                          <span className="text-zinc-300 w-8">6/300</span>
+                          <span className="text-zinc-300 w-12 text-right">6/300</span>
                         </div>
                       </div>
                     </div>
@@ -1165,32 +1236,56 @@ export default function MissionControl() {
                       {tasks.filter(t => t.urgency === 'urgent' && t.assigned_to === 'matthew' && !['done', 'killed', 'someday'].includes(t.status)).length}
                     </Badge>
                   </CardTitle>
-                  <CardDescription>Your top priorities — click to take action</CardDescription>
+                  <CardDescription>Your top priorities — click task to edit, buttons to act</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     {tasks.filter(t => t.urgency === 'urgent' && t.assigned_to === 'matthew' && !['done', 'killed', 'someday'].includes(t.status)).length > 0 ? (
                       tasks.filter(t => t.urgency === 'urgent' && t.assigned_to === 'matthew' && !['done', 'killed', 'someday'].includes(t.status)).map((task, idx) => (
                         <div key={task.id} className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-800/30">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-3 flex-1">
-                              <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-bold text-black shrink-0 mt-0.5">{idx + 1}</div>
-                              <div className="flex-1">
-                                <div className="text-sm font-medium text-white">{task.title}</div>
-                                {task.notes && (
-                                  <div className="text-xs text-zinc-400 mt-1 p-2 bg-zinc-800/50 rounded">📝 {task.notes}</div>
-                                )}
-                                <div className="text-xs text-zinc-500 mt-1">
-                                  {task.person && `${task.person} • `}{task.due_date && `Due ${new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-                                </div>
+                          {editingTask === task.id ? (
+                            /* EDITING MODE */
+                            <div className="space-y-2">
+                              <Input 
+                                value={editTitle} 
+                                onChange={(e) => setEditTitle(e.target.value)}
+                                className="bg-zinc-800 border-zinc-600 text-white"
+                                placeholder="Task title..."
+                              />
+                              <textarea 
+                                value={editNotes} 
+                                onChange={(e) => setEditNotes(e.target.value)}
+                                className="w-full p-2 rounded bg-zinc-800 border border-zinc-600 text-zinc-300 text-sm min-h-[60px]"
+                                placeholder="Add notes..."
+                              />
+                              <div className="flex gap-2">
+                                <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500" onClick={() => saveTaskEdit(task.id)}>💾 Save</Button>
+                                <Button size="sm" variant="ghost" onClick={() => setEditingTask(null)}>Cancel</Button>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1 ml-2">
-                              <Button size="sm" variant="ghost" className="h-8 px-2 text-emerald-400 hover:bg-emerald-950/50" onClick={() => updateTaskStatus(task.id, 'done')} title="Mark Done">✓ Done</Button>
-                              <Button size="sm" variant="ghost" className="h-8 px-2 text-amber-400 hover:bg-amber-950/50" onClick={() => updateTaskStatus(task.id, 'scheduled')} title="Schedule">📅</Button>
-                              <Button size="sm" variant="ghost" className="h-8 px-2 text-zinc-400 hover:bg-zinc-800" onClick={() => updateTaskStatus(task.id, 'someday')} title="Pause">⏸️</Button>
+                          ) : (
+                            /* VIEW MODE */
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start gap-3 flex-1 cursor-pointer" onClick={() => startEditTask(task)}>
+                                <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-bold text-black shrink-0 mt-0.5">{idx + 1}</div>
+                                <div className="flex-1">
+                                  <div className="text-sm font-medium text-white hover:text-emerald-300 transition-colors">{task.title}</div>
+                                  {task.notes && (
+                                    <div className="text-xs text-zinc-400 mt-1 p-2 bg-zinc-800/50 rounded">📝 {task.notes}</div>
+                                  )}
+                                  <div className="text-xs text-zinc-500 mt-1">
+                                    {task.person && `${task.person} • `}{task.due_date && `Due ${new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                                    <span className="text-zinc-600 ml-2">Click to edit</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 ml-2">
+                                <Button size="sm" variant="ghost" className="h-8 px-2 text-emerald-400 hover:bg-emerald-950/50" onClick={() => updateTaskStatus(task.id, 'done')} title="Mark Done">✓ Done</Button>
+                                <Button size="sm" variant="ghost" className="h-8 px-2 text-amber-400 hover:bg-amber-950/50" onClick={() => updateTaskStatus(task.id, 'scheduled')} title="Schedule">📅</Button>
+                                <Button size="sm" variant="ghost" className="h-8 px-2 text-zinc-400 hover:bg-zinc-800" onClick={() => updateTaskStatus(task.id, 'someday')} title="Pause">⏸️</Button>
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
                       ))
                     ) : (
@@ -1222,31 +1317,54 @@ export default function MissionControl() {
                   <ScrollArea className="h-[400px]">
                     <div className="space-y-2 pr-2">
                       {tasks.filter(t => !['done', 'killed'].includes(t.status) && !(t.urgency === 'urgent' && t.assigned_to === 'matthew')).map(task => (
-                        <div key={task.id} className="p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors group">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className={task.assigned_to === 'matthew' ? 'text-emerald-400' : 'text-cyan-400'}>
-                                  {task.assigned_to === 'matthew' ? '🟢' : '🔵'}
-                                </span>
-                                <span className="text-sm text-white">{task.title}</span>
-                              </div>
-                              {task.notes && (
-                                <div className="text-xs text-zinc-400 mt-1 ml-6 p-2 bg-zinc-900/50 rounded">📝 {task.notes}</div>
-                              )}
-                              <div className="text-xs text-zinc-500 mt-1 ml-6">
-                                {task.status}{task.person && ` • ${task.person}`}{task.google_list_name && ` • ${task.google_list_name}`}
+                        <div key={task.id} className="p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors">
+                          {editingTask === task.id ? (
+                            /* EDITING MODE */
+                            <div className="space-y-2">
+                              <Input 
+                                value={editTitle} 
+                                onChange={(e) => setEditTitle(e.target.value)}
+                                className="bg-zinc-900 border-zinc-600 text-white"
+                                placeholder="Task title..."
+                              />
+                              <textarea 
+                                value={editNotes} 
+                                onChange={(e) => setEditNotes(e.target.value)}
+                                className="w-full p-2 rounded bg-zinc-900 border border-zinc-600 text-zinc-300 text-sm min-h-[60px]"
+                                placeholder="Add notes..."
+                              />
+                              <div className="flex gap-2">
+                                <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500" onClick={() => saveTaskEdit(task.id)}>💾 Save</Button>
+                                <Button size="sm" variant="ghost" onClick={() => setEditingTask(null)}>Cancel</Button>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button size="sm" variant="ghost" className="h-7 px-2 text-red-400 hover:bg-red-950/50 text-xs" 
-                                onClick={async () => { await supabase.from('tasks').update({ urgency: 'urgent' }).eq('id', task.id); showToast('⚡ Moved to Do Now'); fetchData() }}>
-                                → Do Now
-                              </Button>
-                              <Button size="sm" variant="ghost" className="h-7 px-2 text-emerald-400 hover:bg-emerald-950/50 text-xs" onClick={() => updateTaskStatus(task.id, 'done')}>✓</Button>
-                              <Button size="sm" variant="ghost" className="h-7 px-2 text-zinc-400 hover:bg-zinc-800 text-xs" onClick={() => updateTaskStatus(task.id, 'someday')}>⏸️</Button>
+                          ) : (
+                            /* VIEW MODE */
+                            <div className="flex items-start justify-between group">
+                              <div className="flex-1 cursor-pointer" onClick={() => startEditTask(task)}>
+                                <div className="flex items-center gap-2">
+                                  <span className={task.assigned_to === 'matthew' ? 'text-emerald-400' : 'text-cyan-400'}>
+                                    {task.assigned_to === 'matthew' ? '🟢' : '🔵'}
+                                  </span>
+                                  <span className="text-sm text-white hover:text-cyan-300 transition-colors">{task.title}</span>
+                                  <span className="text-xs text-zinc-600 opacity-0 group-hover:opacity-100">✏️ edit</span>
+                                </div>
+                                {task.notes && (
+                                  <div className="text-xs text-zinc-400 mt-1 ml-6 p-2 bg-zinc-900/50 rounded">📝 {task.notes}</div>
+                                )}
+                                <div className="text-xs text-zinc-500 mt-1 ml-6">
+                                  {task.status}{task.person && ` • ${task.person}`}{task.google_list_name && ` • ${task.google_list_name}`}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-red-400 hover:bg-red-950/50 text-xs" onClick={() => promoteToDoNow(task.id)}>
+                                  ⚡ Do Now
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-emerald-400 hover:bg-emerald-950/50 text-xs" onClick={() => updateTaskStatus(task.id, 'done')}>✓</Button>
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-zinc-400 hover:bg-zinc-800 text-xs" onClick={() => updateTaskStatus(task.id, 'someday')}>⏸️</Button>
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1264,7 +1382,7 @@ export default function MissionControl() {
                         {completedTasks.length}
                       </Badge>
                     </div>
-                    <span className="text-xs text-zinc-500">Click to expand</span>
+                    <span className="text-xs text-zinc-500">All tasks preserved</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
