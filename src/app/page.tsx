@@ -678,30 +678,27 @@ export default function MissionControl() {
                 🎯 Command
               </TabsTrigger>
               <TabsTrigger value="tasks" className="data-[state=active]:bg-zinc-800 relative">
-                📋 Tasks
+                ⚡ Tasks
                 <Badge className="ml-2 bg-zinc-700 text-zinc-300 border-zinc-600">
                   {tasks.filter(t => !['done', 'killed'].includes(t.status)).length}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger value="aaron" className="data-[state=active]:bg-zinc-800 relative">
                 🤖 Aaron
-                {tasks.filter(t => t.assigned_to === 'aaron' && t.status === 'needs_input').length > 0 && (
+                {aaronNeedsMatthew.length > 0 && (
                   <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">
-                    {tasks.filter(t => t.assigned_to === 'aaron' && t.status === 'needs_input').length}
+                    {aaronNeedsMatthew.length}
                   </Badge>
                 )}
               </TabsTrigger>
               <TabsTrigger value="week" className="data-[state=active]:bg-zinc-800">
-                📊 This Week
-              </TabsTrigger>
-              <TabsTrigger value="automation" className="data-[state=active]:bg-zinc-800">
-                🤖 Automation
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="data-[state=active]:bg-zinc-800">
-                📜 Activity
+                📊 Pulse
               </TabsTrigger>
               <TabsTrigger value="brain" className="data-[state=active]:bg-zinc-800">
-                🧠 Second Brain
+                💡 Capture
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="data-[state=active]:bg-zinc-800">
+                📜 Log
               </TabsTrigger>
             </TabsList>
 
@@ -1409,133 +1406,121 @@ export default function MissionControl() {
               </Card>
             </TabsContent>
 
-            {/* ==================== AARON TAB ==================== */}
+            {/* ==================== AARON TAB (Simplified) ==================== */}
             <TabsContent value="aaron" className="space-y-6">
+              {/* WORKING ON NOW - Big prominent card */}
+              <Card className="bg-gradient-to-r from-cyan-950/50 to-zinc-900 border-cyan-800/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <div className="w-3 h-3 rounded-full bg-cyan-500 animate-pulse" />
+                    Aaron is Working On...
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {aaronInProgress.length > 0 ? (
+                    <div className="space-y-3">
+                      {aaronInProgress.map((task) => (
+                        <div key={task.id} className="p-4 rounded-lg bg-zinc-900/80 border border-cyan-800/30">
+                          <div className="text-lg font-medium text-white">{task.title}</div>
+                          {task.description && (
+                            <div className="text-sm text-zinc-400 mt-2">{task.description}</div>
+                          )}
+                          {task.notes && (
+                            <div className="text-xs text-cyan-400 mt-2 p-2 bg-cyan-950/30 rounded">📝 {task.notes}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="text-4xl mb-3">🤖</div>
+                      <div className="text-lg text-zinc-300">Ready for your next task!</div>
+                      <div className="text-sm text-zinc-500 mt-1">Assign something via chat or Tasks tab</div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Needs Matthew */}
-                <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-amber-500">
+                {/* NEEDS YOU */}
+                <Card className={`bg-zinc-900 border-zinc-800 ${aaronNeedsMatthew.length > 0 ? 'border-l-4 border-l-amber-500' : ''}`}>
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-lg">
-                      <AlertCircle className="w-5 h-5 text-amber-500" />
-                      Needs Your Input
+                      {aaronNeedsMatthew.length > 0 ? (
+                        <AlertCircle className="w-5 h-5 text-amber-500" />
+                      ) : (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                      )}
+                      Needs You
                       {aaronNeedsMatthew.length > 0 && (
                         <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">
                           {aaronNeedsMatthew.length}
                         </Badge>
                       )}
                     </CardTitle>
-                    <CardDescription>Aaron is blocked and needs your help</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {aaronNeedsMatthew.length > 0 ? (
                       <div className="space-y-2">
                         {aaronNeedsMatthew.map((task) => (
                           <div key={task.id} className="p-3 rounded-lg bg-amber-950/20 border border-amber-800/30">
-                            <div className="font-medium text-white">{task.title}</div>
+                            <div className="font-medium text-white text-sm">{task.title}</div>
                             {task.clarity_question && (
-                              <div className="text-sm text-amber-300 mt-1">❓ {task.clarity_question}</div>
-                            )}
-                            {task.description && !task.clarity_question && (
-                              <div className="text-sm text-zinc-400 mt-1">{task.description}</div>
+                              <div className="text-xs text-amber-300 mt-1">❓ {task.clarity_question}</div>
                             )}
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-6">
-                        <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
-                        <div className="text-sm text-zinc-400">All clear! Aaron has what he needs.</div>
+                      <div className="text-center py-4">
+                        <div className="text-sm text-emerald-400">✓ All clear!</div>
+                        <div className="text-xs text-zinc-500">Aaron has what he needs</div>
                       </div>
                     )}
                   </CardContent>
                 </Card>
 
-                {/* In Progress */}
-                <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-cyan-500">
+                {/* QUICK STATS */}
+                <Card className="bg-zinc-900 border-zinc-800">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-lg">
-                      <Clock className="w-5 h-5 text-cyan-500 animate-pulse" />
-                      In Progress
-                      {aaronInProgress.length > 0 && (
-                        <Badge className="ml-2 bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
-                          {aaronInProgress.length}
-                        </Badge>
-                      )}
+                      <Zap className="w-5 h-5 text-amber-500" />
+                      Today&apos;s Stats
                     </CardTitle>
-                    <CardDescription>What Aaron is actively working on</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {aaronInProgress.length > 0 ? (
-                      <div className="space-y-2">
-                        {aaronInProgress.map((task) => (
-                          <div key={task.id} className="p-3 rounded-lg bg-cyan-950/20 border border-cyan-800/30">
-                            <div className="font-medium text-white">{task.title}</div>
-                            {task.description && (
-                              <div className="text-sm text-zinc-400 mt-1">{task.description}</div>
-                            )}
-                          </div>
-                        ))}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="text-center p-3 rounded-lg bg-zinc-800/50">
+                        <div className="text-2xl font-bold text-white">
+                          {activities.filter(a => new Date(a.created_at).toDateString() === new Date().toDateString()).length}
+                        </div>
+                        <div className="text-xs text-zinc-500">Actions</div>
                       </div>
-                    ) : (
-                      <div className="text-center py-6">
-                        <div className="text-sm text-zinc-400">Nothing actively in progress</div>
-                        <div className="text-xs text-zinc-500 mt-1">Check the queue below</div>
+                      <div className="text-center p-3 rounded-lg bg-zinc-800/50">
+                        <div className="text-2xl font-bold text-emerald-400">
+                          {aaronCompleted.filter(t => {
+                            const d = new Date(t.completed_at || t.updated_at)
+                            return d.toDateString() === new Date().toDateString()
+                          }).length}
+                        </div>
+                        <div className="text-xs text-zinc-500">Completed</div>
                       </div>
-                    )}
+                      <div className="text-center p-3 rounded-lg bg-zinc-800/50">
+                        <div className="text-2xl font-bold text-cyan-400">{aaronQueue.length}</div>
+                        <div className="text-xs text-zinc-500">In Queue</div>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Queue */}
+              {/* JUST FINISHED - Last 24h */}
               <Card className="bg-zinc-900 border-zinc-800">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <FileText className="w-5 h-5 text-zinc-400" />
-                    Queue
-                    <Badge className="ml-2 bg-zinc-700 text-zinc-300 border-zinc-600">
-                      {aaronQueue.length}
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription>Tasks assigned to Aaron, not yet started</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {aaronQueue.length > 0 ? (
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {aaronQueue.map((task) => (
-                        <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50">
-                          <div className="flex-1">
-                            <div className="text-sm text-zinc-200">{task.title}</div>
-                            {task.urgency && task.urgency !== 'normal' && (
-                              <Badge variant="outline" className={
-                                task.urgency === 'urgent' ? "border-red-500/50 text-red-400 mt-1" :
-                                task.urgency === 'high' ? "border-amber-500/50 text-amber-400 mt-1" :
-                                "border-zinc-600 text-zinc-400 mt-1"
-                              }>
-                                {task.urgency}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6">
-                      <div className="text-sm text-zinc-400">Queue is empty</div>
-                      <div className="text-xs text-zinc-500 mt-1">Assign tasks to Aaron to see them here</div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Aaron's Completed */}
-              <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-emerald-500">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    Aaron&apos;s Completed
-                    <Badge className="ml-2 bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                      {aaronCompleted.length}
-                    </Badge>
+                    Just Finished
+                    <span className="text-xs text-zinc-500 ml-auto">Last 24 hours</span>
                   </CardTitle>
                   <CardDescription>What Aaron has finished</CardDescription>
                 </CardHeader>
@@ -1568,59 +1553,53 @@ export default function MissionControl() {
               </Card>
             </TabsContent>
 
-            {/* ==================== THIS WEEK TAB ==================== */}
+            {/* ==================== PULSE TAB (Week + System Health) ==================== */}
             <TabsContent value="week" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Cron Schedule */}
-                <Card className="lg:col-span-2 bg-zinc-900 border-zinc-800">
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Calendar className="w-5 h-5 text-cyan-500" />
-                        Cron Schedule This Week
-                      </CardTitle>
+              {/* This Week's Wins */}
+              <Card className="bg-gradient-to-r from-emerald-950/30 to-zinc-900 border-emerald-800/30">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    🏆 This Week&apos;s Wins
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="text-center p-4 rounded-lg bg-zinc-900/80">
+                      <div className="text-3xl font-bold text-emerald-400">{completedThisWeek.length}</div>
+                      <div className="text-xs text-zinc-500">Tasks Done</div>
                     </div>
-                    <a href="/cron">
-                      <Button variant="outline" size="sm" className="border-zinc-700 text-zinc-400 hover:text-white">
-                        View All →
-                      </Button>
-                    </a>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-7 gap-2">
-                      {cronSchedule.map((day) => (
-                        <div key={day.day} className="space-y-2">
-                          <div className="text-center font-semibold text-zinc-300 pb-2 border-b border-zinc-800">
-                            {day.day}
-                          </div>
-                          <div className="space-y-1">
-                            {day.jobs.map((job, idx) => (
-                              <div 
-                                key={idx} 
-                                className="text-xs p-2 rounded bg-zinc-800 text-zinc-400 hover:bg-zinc-700 transition-colors"
-                              >
-                                {job}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
+                    <div className="text-center p-4 rounded-lg bg-zinc-900/80">
+                      <div className="text-3xl font-bold text-cyan-400">{closedWonPipeline.length}</div>
+                      <div className="text-xs text-zinc-500">Deals Closed</div>
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="text-center p-4 rounded-lg bg-zinc-900/80">
+                      <div className="text-3xl font-bold text-violet-400">
+                        {activities.filter(a => {
+                          const d = new Date(a.created_at)
+                          const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+                          return d >= weekAgo
+                        }).length}
+                      </div>
+                      <div className="text-xs text-zinc-500">Actions</div>
+                    </div>
+                    <div className="text-center p-4 rounded-lg bg-zinc-900/80">
+                      <div className="text-3xl font-bold text-amber-400">6</div>
+                      <div className="text-xs text-zinc-500">Automations</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Weekly Focus */}
                 <Card className="bg-zinc-900 border-zinc-800">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
                       <Target className="w-5 h-5 text-amber-500" />
                       Weekly Focus
                     </CardTitle>
-                    <CardDescription>
-                      {weeklyPriorities ? `Week of ${new Date(weeklyPriorities.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'What matters this week?'}
-                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3">
                     {weeklyPriorities ? (
                       <>
                         {weeklyPriorities.priority_1 && (
@@ -1641,137 +1620,105 @@ export default function MissionControl() {
                             <div className="text-sm text-zinc-200">{weeklyPriorities.priority_3}</div>
                           </div>
                         )}
-                        {weeklyPriorities.notes && (
-                          <div className="pt-3 border-t border-zinc-800">
-                            <div className="text-xs text-zinc-500">{weeklyPriorities.notes}</div>
-                          </div>
-                        )}
                       </>
                     ) : (
-                      <div className="text-center py-6">
-                        <Target className="w-10 h-10 text-zinc-600 mx-auto mb-3" />
-                        <div className="text-sm text-zinc-400 mb-2">No priorities set for this week</div>
-                        <div className="text-xs text-zinc-500">Sunday 5pm — Aaron will ask you!</div>
+                      <div className="text-center py-4">
+                        <div className="text-sm text-zinc-400">No priorities set</div>
+                        <div className="text-xs text-zinc-500">Sunday — Aaron will ask!</div>
                       </div>
                     )}
                   </CardContent>
                 </Card>
+
+                {/* System Health */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      💚 System Health
+                      <a href="/cron" className="ml-auto">
+                        <Button variant="ghost" size="sm" className="text-xs text-zinc-500 hover:text-white">Details →</Button>
+                      </a>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50">
+                        <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                        <div>
+                          <div className="text-sm text-zinc-200">Email Sync</div>
+                          <div className="text-xs text-zinc-500">3x daily</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50">
+                        <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                        <div>
+                          <div className="text-sm text-zinc-200">Calendar</div>
+                          <div className="text-xs text-zinc-500">Connected</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50">
+                        <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                        <div>
+                          <div className="text-sm text-zinc-200">Circle API</div>
+                          <div className="text-xs text-zinc-500">Active</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50">
+                        <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                        <div>
+                          <div className="text-sm text-zinc-200">Zoom Upload</div>
+                          <div className="text-xs text-zinc-500">6 automations</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50">
+                        <div className="w-3 h-3 rounded-full bg-amber-500" />
+                        <div>
+                          <div className="text-sm text-zinc-200">Keap API</div>
+                          <div className="text-xs text-amber-400">Pending setup</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50">
+                        <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                        <div>
+                          <div className="text-sm text-zinc-200">Mission Control</div>
+                          <div className="text-xs text-zinc-500">Real-time</div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
-              {/* Aaron's Tasks */}
+              {/* Weekly Rhythm */}
               <Card className="bg-zinc-900 border-zinc-800">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-violet-500" />
-                    What Aaron&apos;s Working On
+                <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Calendar className="w-5 h-5 text-cyan-500" />
+                    Weekly Rhythm
                   </CardTitle>
+                  <a href="/cron">
+                    <Button variant="outline" size="sm" className="border-zinc-700 text-zinc-400 hover:text-white text-xs">
+                      Full Schedule →
+                    </Button>
+                  </a>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    {aaronTasks.length > 0 ? aaronTasks.map((task) => (
-                      <div key={task.id} className="flex items-center justify-between p-3 rounded bg-zinc-800 hover:bg-zinc-750 transition-colors">
-                        <div className="flex items-center gap-3">
-                          {task.status === 'completed' && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
-                          {task.status === 'in_progress' && <Clock className="w-5 h-5 text-cyan-500 animate-pulse" />}
-                          {task.status === 'pending' && <Clock className="w-5 h-5 text-zinc-500" />}
-                          <span className={task.status === 'completed' ? 'text-zinc-500' : 'text-zinc-200'}>
-                            {task.title}
-                          </span>
+                  <div className="grid grid-cols-7 gap-2">
+                    {cronSchedule.map((day) => (
+                      <div key={day.day} className="text-center">
+                        <div className={`font-semibold pb-2 ${day.day === new Date().toLocaleDateString('en-US', { weekday: 'short' }) ? 'text-cyan-400' : 'text-zinc-400'}`}>
+                          {day.day}
                         </div>
-                        <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-500">
-                          {task.urgency || task.status}
-                        </Badge>
+                        <div className="text-2xl font-bold text-zinc-300">{day.jobs.length}</div>
+                        <div className="text-xs text-zinc-500">jobs</div>
                       </div>
-                    )) : (
-                      <p className="text-zinc-500 text-center py-4">No active tasks</p>
-                    )}
+                    ))}
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* ==================== AUTOMATION TAB (LIST VIEW) ==================== */}
-            <TabsContent value="automation" className="space-y-4">
-              <Card className="bg-zinc-900 border-zinc-800">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    🤖 Automation Status
-                  </CardTitle>
-                  <CardDescription>
-                    {automations.filter(a => a.last_status === 'success').length} healthy, {' '}
-                    {automations.filter(a => a.last_status === 'failed').length} failed
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1">
-                    {/* Header */}
-                    <div className="grid grid-cols-12 gap-4 px-3 py-2 text-xs font-medium text-zinc-500 border-b border-zinc-800">
-                      <div className="col-span-1">Status</div>
-                      <div className="col-span-5">Name</div>
-                      <div className="col-span-3">Schedule</div>
-                      <div className="col-span-3">Last Run</div>
-                    </div>
-                    
-                    {/* Rows */}
-                    {automations.length > 0 ? automations.map((auto) => (
-                      <div key={auto.id} className="grid grid-cols-12 gap-4 px-3 py-3 hover:bg-zinc-800/50 rounded items-center">
-                        <div className="col-span-1">
-                          {auto.last_status === 'success' && (
-                            <div className="w-3 h-3 rounded-full bg-emerald-500" title="Success" />
-                          )}
-                          {auto.last_status === 'failed' && (
-                            <div className="w-3 h-3 rounded-full bg-red-500" title="Failed" />
-                          )}
-                          {auto.last_status === 'pending' && (
-                            <div className="w-3 h-3 rounded-full bg-amber-500" title="Pending" />
-                          )}
-                          {!auto.last_status && (
-                            <div className="w-3 h-3 rounded-full bg-zinc-600" title="Never run" />
-                          )}
-                        </div>
-                        <div className="col-span-5 text-sm text-zinc-200">{auto.name}</div>
-                        <div className="col-span-3 text-sm text-zinc-500">{auto.schedule}</div>
-                        <div className="col-span-3 text-sm text-zinc-500">
-                          {auto.last_run ? formatRelativeTime(auto.last_run) : 'Never'}
-                        </div>
-                      </div>
-                    )) : (
-                      <div className="text-center py-8 text-zinc-500">No automations configured</div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Summary Stats */}
-              <div className="grid grid-cols-3 gap-4">
-                <Card className="bg-emerald-950/50 border-emerald-800/50">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-4xl font-bold text-emerald-400 mb-2">
-                      {automations.filter(a => a.last_status === 'success').length}
-                    </div>
-                    <div className="text-sm text-emerald-300/70">Healthy</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-red-950/50 border-red-800/50">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-4xl font-bold text-red-400 mb-2">
-                      {automations.filter(a => a.last_status === 'failed').length}
-                    </div>
-                    <div className="text-sm text-red-300/70">Failed</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-amber-950/50 border-amber-800/50">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-4xl font-bold text-amber-400 mb-2">
-                      {automations.filter(a => !a.last_status || a.last_status === 'pending').length}
-                    </div>
-                    <div className="text-sm text-amber-300/70">Pending</div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* ==================== ACTIVITY FEED TAB ==================== */}
+            {/* ==================== ACTIVITY LOG TAB ==================== */}
             <TabsContent value="activity">
               <Card className="bg-zinc-900 border-zinc-800">
                 <CardHeader>
@@ -1819,152 +1766,20 @@ export default function MissionControl() {
               </Card>
             </TabsContent>
 
-            {/* ==================== LOOPS TAB (NEW) ==================== */}
-            <TabsContent value="loops" className="space-y-6">
-              <Card className="bg-zinc-900 border-zinc-800">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <RotateCcw className="w-5 h-5 text-amber-500" />
-                    Open Loops
-                    {loops.length > 0 && (
-                      <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">
-                        {loops.length}
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <CardDescription>
-                    Stalled items, unanswered messages, and incomplete projects
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {loops.length > 0 ? (
-                    <div className="space-y-3">
-                      {loops.map((loop) => (
-                        <div key={loop.id} className="flex items-start justify-between p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge variant="outline" className={
-                                loop.urgency === 'critical' ? "border-red-500/50 text-red-400" :
-                                loop.urgency === 'high' ? "border-amber-500/50 text-amber-400" :
-                                "border-zinc-600 text-zinc-400"
-                              }>
-                                {loop.urgency}
-                              </Badge>
-                              <span className="text-xs text-zinc-500">{loop.type.replace(/_/g, ' ')}</span>
-                            </div>
-                            <div className="font-medium text-white">{loop.title}</div>
-                            {loop.description && (
-                              <div className="text-sm text-zinc-400 mt-1">{loop.description}</div>
-                            )}
-                            <div className="text-xs text-zinc-500 mt-2">
-                              Stale since {formatRelativeTime(loop.stale_since)}
-                            </div>
-                          </div>
-                          <div className="flex gap-2 ml-4">
-                            <Button size="sm" variant="outline" className="border-zinc-700">
-                              Dismiss
-                            </Button>
-                            <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
-                              Resolve
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
-                      <div className="text-lg font-medium text-white">All loops closed!</div>
-                      <div className="text-sm text-zinc-400">No stalled items or incomplete projects.</div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* ==================== SECOND BRAIN TAB (NEW) ==================== */}
+            {/* ==================== CAPTURE TAB (Simplified) ==================== */}
             <TabsContent value="brain" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Captures List */}
-                <Card className="lg:col-span-2 bg-zinc-900 border-zinc-800">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Brain className="w-5 h-5 text-violet-500" />
-                      Recent Captures
-                    </CardTitle>
-                    <CardDescription>
-                      Ideas, insights, and notes captured from conversations
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="h-[400px]">
-                      <div className="space-y-3">
-                        {captures.length > 0 ? captures.map((capture) => (
-                          <div key={capture.id} className="p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
-                            <div className="flex items-start justify-between mb-2">
-                              <Badge variant="outline" className={
-                                capture.type === 'insight' ? "border-violet-500/50 text-violet-400" :
-                                capture.type === 'idea' ? "border-cyan-500/50 text-cyan-400" :
-                                capture.type === 'task' ? "border-amber-500/50 text-amber-400" :
-                                "border-zinc-600 text-zinc-400"
-                              }>
-                                {capture.type}
-                              </Badge>
-                              <span className="text-xs text-zinc-500">{formatRelativeTime(capture.created_at)}</span>
-                            </div>
-                            <div className="text-sm text-zinc-200">{capture.content}</div>
-                            {capture.source && (
-                              <div className="text-xs text-zinc-500 mt-2">Source: {capture.source}</div>
-                            )}
-                          </div>
-                        )) : (
-                          <div className="text-center py-8 text-zinc-500">
-                            No captures yet. Ideas and insights will appear here.
-                          </div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-
-                {/* Decisions Log */}
-                <Card className="bg-zinc-900 border-zinc-800">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-emerald-500" />
-                      Decision Log
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {decisions.length > 0 ? decisions.map((decision) => (
-                        <div key={decision.id} className="p-3 rounded-lg bg-zinc-800/50">
-                          <div className="font-medium text-sm text-white mb-1">{decision.title}</div>
-                          {decision.description && (
-                            <div className="text-xs text-zinc-400 mb-2">{decision.description}</div>
-                          )}
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-zinc-500">{formatDate(decision.made_at)}</span>
-                            <Badge variant="outline" className="text-xs border-emerald-500/30 text-emerald-400">
-                              {decision.status}
-                            </Badge>
-                          </div>
-                        </div>
-                      )) : (
-                        <div className="text-center py-4 text-zinc-500">No decisions logged yet.</div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Quick Capture */}
-              <Card className="bg-zinc-900 border-zinc-800">
-                <CardContent className="p-4">
+              {/* Quick Capture - Prominent at top */}
+              <Card className="bg-gradient-to-r from-violet-950/30 to-zinc-900 border-violet-800/30">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Lightbulb className="w-6 h-6 text-violet-400" />
+                    <span className="text-lg font-medium text-white">Quick Capture</span>
+                    <span className="text-xs text-zinc-500 ml-auto">Press Enter to save</span>
+                  </div>
                   <div className="flex gap-3">
                     <Input 
-                      placeholder="Quick capture — type an idea, insight, or note..."
-                      className="flex-1 bg-zinc-800 border-zinc-700 text-zinc-100"
+                      placeholder="💡 Type an idea, insight, or note..."
+                      className="flex-1 bg-zinc-900 border-zinc-700 text-zinc-100 text-lg py-6"
                       value={captureInput}
                       onChange={(e) => setCaptureInput(e.target.value)}
                       onKeyDown={(e) => {
@@ -1975,14 +1790,128 @@ export default function MissionControl() {
                       }}
                     />
                     <Button 
-                      className="bg-violet-600 hover:bg-violet-700"
+                      className="bg-violet-600 hover:bg-violet-500 px-6"
                       onClick={handleQuickCapture}
                       disabled={capturing || !captureInput.trim()}
                     >
-                      <Lightbulb className="w-4 h-4 mr-2" />
-                      {capturing ? 'Saving...' : 'Capture'}
+                      {capturing ? '...' : '💾 Save'}
                     </Button>
                   </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button variant="outline" size="sm" className="border-zinc-700 text-zinc-400 text-xs" disabled>
+                      🎤 Voice (coming soon)
+                    </Button>
+                    <Button variant="outline" size="sm" className="border-zinc-700 text-zinc-400 text-xs" disabled>
+                      📎 File (coming soon)
+                    </Button>
+                    <Button variant="outline" size="sm" className="border-zinc-700 text-zinc-400 text-xs" disabled>
+                      📸 Screenshot (coming soon)
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Fresh Captures */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      🆕 Fresh
+                      <Badge className="ml-2 bg-violet-500/20 text-violet-400 border-violet-500/30">
+                        {captures.filter(c => !c.processed).length}
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription>Unprocessed captures</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[300px]">
+                      <div className="space-y-2 pr-2">
+                        {captures.filter(c => !c.processed).length > 0 ? captures.filter(c => !c.processed).map((capture) => (
+                          <div key={capture.id} className="p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                            <div className="text-sm text-zinc-200">{capture.content}</div>
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="text-xs text-zinc-500">{formatRelativeTime(capture.created_at)}</span>
+                              <Badge variant="outline" className="text-xs border-zinc-600 text-zinc-400">
+                                {capture.type}
+                              </Badge>
+                            </div>
+                          </div>
+                        )) : (
+                          <div className="text-center py-6 text-zinc-500">
+                            No unprocessed captures
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                {/* Recent Decisions */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      📝 Recent Decisions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[300px]">
+                      <div className="space-y-2 pr-2">
+                        {decisions.length > 0 ? decisions.map((decision) => (
+                          <div key={decision.id} className="p-3 rounded-lg bg-zinc-800/50">
+                            <div className="font-medium text-sm text-white">{decision.title}</div>
+                            {decision.description && (
+                              <div className="text-xs text-zinc-400 mt-1">{decision.description}</div>
+                            )}
+                            <div className="text-xs text-zinc-500 mt-2">{formatDate(decision.made_at)}</div>
+                          </div>
+                        )) : (
+                          <div className="text-center py-6 text-zinc-500">
+                            No decisions logged yet
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* All Captures */}
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    💡 All Captures
+                    <Badge variant="outline" className="ml-2 border-zinc-700 text-zinc-400">
+                      {captures.length}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[300px]">
+                    <div className="space-y-2 pr-2">
+                      {captures.length > 0 ? captures.map((capture) => (
+                        <div key={capture.id} className="p-3 rounded-lg bg-zinc-800/30 hover:bg-zinc-800/50 transition-colors">
+                          <div className="flex items-start justify-between">
+                            <div className="text-sm text-zinc-300">{capture.content}</div>
+                            <Badge variant="outline" className={`ml-2 shrink-0 text-xs ${
+                              capture.type === 'idea' ? 'border-cyan-500/50 text-cyan-400' :
+                              capture.type === 'insight' ? 'border-violet-500/50 text-violet-400' :
+                              'border-zinc-600 text-zinc-400'
+                            }`}>
+                              {capture.type}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-zinc-500 mt-1">
+                            {formatRelativeTime(capture.created_at)}
+                            {capture.source && ` • ${capture.source}`}
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="text-center py-6 text-zinc-500">
+                          No captures yet. Start by typing above!
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
                 </CardContent>
               </Card>
             </TabsContent>
