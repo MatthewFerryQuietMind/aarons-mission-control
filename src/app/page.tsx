@@ -706,8 +706,28 @@ export default function MissionControl() {
 
             {/* ==================== COMMAND TAB (NEW DEFAULT) ==================== */}
             <TabsContent value="command" className="space-y-6">
-              {/* ===== TOP PROGRESS BOXES (5 across) ===== */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {/* ===== TOP PROGRESS BOXES (MRR wide, others compact) ===== */}
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                {/* MRR - WIDE (2 cols) */}
+                <Card className="bg-zinc-900 border-zinc-800 md:col-span-2">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <DollarSign className="w-4 h-4 text-emerald-500" />
+                      <span className="text-xs text-zinc-500">MRR</span>
+                    </div>
+                    <div className="text-3xl font-bold text-white">
+                      ${revenue ? Math.round(revenue.recurring_monthly / 1000) : '...'}k
+                      <span className="text-zinc-500 text-lg">/$90k</span>
+                    </div>
+                    <div className="h-2 bg-zinc-800 rounded-full mt-3 overflow-hidden">
+                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: revenue ? `${(revenue.recurring_monthly / 90000) * 100}%` : '0%' }} />
+                    </div>
+                    {revenue && (
+                      <div className="text-xs text-zinc-500 mt-2">Updated: {new Date(revenue.date_calculated).toLocaleDateString()}</div>
+                    )}
+                  </CardContent>
+                </Card>
+
                 {/* Coaching Clients */}
                 <Card className="bg-zinc-900 border-zinc-800">
                   <CardContent className="p-4">
@@ -719,26 +739,6 @@ export default function MissionControl() {
                     <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
                       <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${(7 / 15) * 100}%` }} />
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* MRR */}
-                <Card className="bg-zinc-900 border-zinc-800">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <DollarSign className="w-4 h-4 text-emerald-500" />
-                      <span className="text-xs text-zinc-500">MRR</span>
-                    </div>
-                    <div className="text-2xl font-bold text-white">
-                      ${revenue ? Math.round(revenue.recurring_monthly / 1000) : '...'}k
-                      <span className="text-zinc-500 text-lg">/$90k</span>
-                    </div>
-                    <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: revenue ? `${(revenue.recurring_monthly / 90000) * 100}%` : '0%' }} />
-                    </div>
-                    {revenue && (
-                      <div className="text-xs text-zinc-500 mt-2">Updated: {new Date(revenue.date_calculated).toLocaleDateString()}</div>
-                    )}
                   </CardContent>
                 </Card>
 
