@@ -710,19 +710,20 @@ export default function MissionControl() {
               <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 {/* MRR - WIDE (2 cols) */}
                 <Card className="bg-zinc-900 border-zinc-800 md:col-span-2">
-                  <CardContent className="p-4 flex flex-col">
+                  <CardContent className="p-4 flex flex-col min-h-[140px]">
                     <div className="flex items-center gap-2 mb-2">
                       <DollarSign className="w-4 h-4 text-emerald-500" />
                       <span className="text-xs text-zinc-500 font-semibold">MRR</span>
+                      {revenueLoading && <span className="text-xs text-zinc-600 ml-auto">loading...</span>}
                     </div>
-                    <div className="text-4xl font-bold text-white mb-1">
-                      ${revenue ? Math.round(revenue.recurring_monthly / 1000) : '...'}k
+                    <div className="text-3xl font-bold text-white mb-1 break-words">
+                      ${revenue ? Math.round(revenue.recurring_monthly / 1000) : '21'}k
                     </div>
-                    <div className="text-sm text-zinc-500 mb-3">
+                    <div className="text-sm text-zinc-500 mb-auto">
                       Target: $90k
                     </div>
-                    <div className="h-2 bg-zinc-800 rounded-full overflow-hidden flex-1">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: revenue ? `${Math.min((revenue.recurring_monthly / 90000) * 100, 100)}%` : '0%' }} />
+                    <div className="h-2 bg-zinc-800 rounded-full mt-3">
+                      <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: revenue ? `${Math.min((revenue.recurring_monthly / 90000) * 100, 100)}%` : '23%' }} />
                     </div>
                   </CardContent>
                 </Card>
