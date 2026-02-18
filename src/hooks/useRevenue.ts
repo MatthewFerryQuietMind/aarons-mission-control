@@ -17,7 +17,7 @@ export function useRevenue() {
   const fetchRevenue = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/metrics/revenue');
+      const response = await fetch('/api/metrics');
       
       if (!response.ok) {
         throw new Error(`Revenue API error: ${response.statusText}`);
