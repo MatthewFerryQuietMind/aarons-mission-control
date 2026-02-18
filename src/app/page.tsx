@@ -715,9 +715,11 @@ export default function MissionControl() {
                       <DollarSign className="w-4 h-4 text-emerald-500" />
                       <span className="text-xs text-zinc-500">MRR</span>
                     </div>
-                    <div className="text-3xl font-bold text-white">
-                      ${revenue ? Math.round(revenue.recurring_monthly / 1000) : '...'}k
-                      <span className="text-zinc-500 text-lg">/$90k</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-bold text-white whitespace-nowrap">
+                        ${revenue ? Math.round(revenue.recurring_monthly / 1000) : '...'}k
+                      </span>
+                      <span className="text-zinc-500 text-sm">/$90k</span>
                     </div>
                     <div className="h-2 bg-zinc-800 rounded-full mt-3 overflow-hidden">
                       <div className="h-full bg-emerald-500 rounded-full" style={{ width: revenue ? `${(revenue.recurring_monthly / 90000) * 100}%` : '0%' }} />
