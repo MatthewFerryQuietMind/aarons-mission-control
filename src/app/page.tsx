@@ -163,6 +163,7 @@ const cronSchedule = [
 ]
 
 export default function MissionControl() {
+  const { revenue, loading: revenueLoading } = useRevenue()
   const [searchQuery, setSearchQuery] = useState('')
   const [lastRefresh, setLastRefresh] = useState(new Date())
   const [loading, setLoading] = useState(true)
@@ -728,10 +729,16 @@ export default function MissionControl() {
                       <DollarSign className="w-4 h-4 text-emerald-500" />
                       <span className="text-xs text-zinc-500">MRR</span>
                     </div>
-                    <div className="text-2xl font-bold text-white">${Math.round(currentMRR/1000)}k<span className="text-zinc-500 text-lg">/$40k</span></div>
-                    <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(currentMRR / targetMRR) * 100}%` }} />
+                    <div className="text-2xl font-bold text-white">
+                      ${revenue ? Math.round(revenue.recurring_monthly / 1000) : '...'}k
+                      <span className="text-zinc-500 text-lg">/$90k</span>
                     </div>
+                    <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
+                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: revenue ? `${(revenue.recurring_monthly / 90000) * 100}%` : '0%' }} />
+                    </div>
+                    {revenue && (
+                      <div className="text-xs text-zinc-500 mt-2">Updated: {new Date(revenue.date_calculated).toLocaleDateString()}</div>
+                    )}
                   </CardContent>
                 </Card>
 
