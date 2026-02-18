@@ -65,17 +65,20 @@ function calculateMetrics(orders: KeapOrder[]): RevenueData {
     return sum + (order.total_paid || 0);
   }, 0);
 
-  // Calculate last 30 days
+  // Calculate month-to-date (1st of current month to today)
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const monthToDate = paidOrders
+    .filter((order) => new Date(order.order_date) >= monthStart)
+    .reduce((sum, order) => sum + (order.total_paid || 0), 0);
+
+  // Calculate last 30 days (for reference, but not used in display)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const last30Days = paidOrders
     .filter((order) => new Date(order.order_date) >= thirtyDaysAgo)
-    .reduce((sum, order) => sum + (order.total_paid || 0), 0);
-
-  // Calculate recurring (orders with recurring flag or matching patterns)
-  const recurringTotal = paidOrders
-    .filter((order) => order.recurring === true)
     .reduce((sum, order) => sum + (order.total_paid || 0), 0);
 
   const orderCount = paidOrders.length;
@@ -87,7 +90,7 @@ function calculateMetrics(orders: KeapOrder[]): RevenueData {
     average_order: Math.round(avgOrder * 100) / 100,
     date_calculated: new Date().toISOString(),
     last_30_days: Math.round(last30Days * 100) / 100,
-    recurring_monthly: Math.round(recurringTotal * 100) / 100,
+    recurring_monthly: Math.round(monthToDate * 100) / 100, // Now returns month-to-date total
   };
 }
 
