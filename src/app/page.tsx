@@ -710,23 +710,20 @@ export default function MissionControl() {
               <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 {/* MRR - WIDE (2 cols) */}
                 <Card className="bg-zinc-900 border-zinc-800 md:col-span-2">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
+                  <CardContent className="p-4 flex flex-col">
+                    <div className="flex items-center gap-2 mb-2">
                       <DollarSign className="w-4 h-4 text-emerald-500" />
-                      <span className="text-xs text-zinc-500">MRR</span>
+                      <span className="text-xs text-zinc-500 font-semibold">MRR</span>
                     </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-bold text-white whitespace-nowrap">
-                        ${revenue ? Math.round(revenue.recurring_monthly / 1000) : '...'}k
-                      </span>
-                      <span className="text-zinc-500 text-sm">/$90k</span>
+                    <div className="text-4xl font-bold text-white mb-1">
+                      ${revenue ? Math.round(revenue.recurring_monthly / 1000) : '...'}k
                     </div>
-                    <div className="h-2 bg-zinc-800 rounded-full mt-3 overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: revenue ? `${(revenue.recurring_monthly / 90000) * 100}%` : '0%' }} />
+                    <div className="text-sm text-zinc-500 mb-3">
+                      Target: $90k
                     </div>
-                    {revenue && (
-                      <div className="text-xs text-zinc-500 mt-2">Updated: {new Date(revenue.date_calculated).toLocaleDateString()}</div>
-                    )}
+                    <div className="h-2 bg-zinc-800 rounded-full overflow-hidden flex-1">
+                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: revenue ? `${Math.min((revenue.recurring_monthly / 90000) * 100, 100)}%` : '0%' }} />
+                    </div>
                   </CardContent>
                 </Card>
 
