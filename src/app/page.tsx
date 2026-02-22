@@ -1679,10 +1679,10 @@ export default function MissionControl() {
                         </div>
                       </div>
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50">
-                        <div className="w-3 h-3 rounded-full bg-amber-500" />
+                        <div className="w-3 h-3 rounded-full bg-emerald-500" />
                         <div>
                           <div className="text-sm text-zinc-200">Keap API</div>
-                          <div className="text-xs text-amber-400">Pending setup</div>
+                          <div className="text-xs text-zinc-500">Revenue live</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50">
