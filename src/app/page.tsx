@@ -237,6 +237,11 @@ export default function MissionControl() {
   const [captures, setCaptures] = useState<Capture[]>([])
   const [pipeline, setPipeline] = useState<PipelineItem[]>([])
   const [weeklyPriorities, setWeeklyPriorities] = useState<WeeklyPriority | null>(null)
+  
+  // Derived counts from pipeline
+  const coachingCount = pipeline.filter(p => p.product === '1-on-1 Coaching' && (p.stage === 'CLOSED-WON' || p.stage === 'HOT' || p.stage === 'FOLLOW-UP')).length
+  const aoiCount = pipeline.filter(p => p.product?.toLowerCase().includes('aoi')).length
+  const mjmCount = pipeline.filter(p => p.product?.toLowerCase().includes('mjm')).length
 
   // Fetch data from Supabase
   const fetchData = async () => {
@@ -735,9 +740,9 @@ export default function MissionControl() {
                       <Users className="w-4 h-4 text-cyan-500" />
                       <span className="text-xs text-zinc-500">Coaching</span>
                     </div>
-                    <div className="text-2xl font-bold text-white">7<span className="text-zinc-500 text-lg">/15</span></div>
+                    <div className="text-2xl font-bold text-white">{coachingCount}<span className="text-zinc-500 text-lg">/15</span></div>
                     <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
-                      <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${(7 / 15) * 100}%` }} />
+                      <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${(coachingCount / 15) * 100}%` }} />
                     </div>
                   </CardContent>
                 </Card>
@@ -749,9 +754,9 @@ export default function MissionControl() {
                       <Target className="w-4 h-4 text-violet-500" />
                       <span className="text-xs text-zinc-500">AOI</span>
                     </div>
-                    <div className="text-2xl font-bold text-white">~50<span className="text-zinc-500 text-lg"> mbrs</span></div>
+                    <div className="text-2xl font-bold text-white">{aoiCount > 0 ? aoiCount : '~50'}<span className="text-zinc-500 text-lg"> mbrs</span></div>
                     <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
-                      <div className="h-full bg-violet-500 rounded-full" style={{ width: '100%' }} />
+                      <div className="h-full bg-violet-500 rounded-full" style={{ width: `${aoiCount > 0 ? Math.min((aoiCount / 60) * 100, 100) : 83}%` }} />
                     </div>
                   </CardContent>
                 </Card>
@@ -763,9 +768,9 @@ export default function MissionControl() {
                       <Brain className="w-4 h-4 text-amber-500" />
                       <span className="text-xs text-zinc-500">MJM</span>
                     </div>
-                    <div className="text-2xl font-bold text-white">~20<span className="text-zinc-500 text-lg"> mbrs</span></div>
+                    <div className="text-2xl font-bold text-white">{mjmCount > 0 ? mjmCount : '~20'}<span className="text-zinc-500 text-lg"> mbrs</span></div>
                     <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
-                      <div className="h-full bg-amber-500 rounded-full" style={{ width: '100%' }} />
+                      <div className="h-full bg-amber-500 rounded-full" style={{ width: `${mjmCount > 0 ? Math.min((mjmCount / 30) * 100, 100) : 67}%` }} />
                     </div>
                   </CardContent>
                 </Card>
@@ -1167,7 +1172,7 @@ export default function MissionControl() {
                       <div className="text-3xl font-bold text-cyan-400">
                         {Math.round(
                           (currentMRR / 100000) * 25 + 
-                          (7 / 15) * 20 + 
+                          (coachingCount / 15) * 20 + 
                           (0 / 20) * 20 +
                           ((100 - currentKristenTime) / (100 - targetKristenTime)) * 20 +
                           (6 / 300) * 15
@@ -1192,9 +1197,9 @@ export default function MissionControl() {
                         <span className="text-zinc-400">🎯 1-on-1</span>
                         <div className="flex items-center gap-2">
                           <div className="w-12 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${(7 / 15) * 100}%` }} />
+                            <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${(coachingCount / 15) * 100}%` }} />
                           </div>
-                          <span className="text-zinc-300 w-12 text-right">7/15</span>
+                          <span className="text-zinc-300 w-12 text-right">{coachingCount}/15</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
