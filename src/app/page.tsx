@@ -232,6 +232,7 @@ export default function MissionControl() {
   const [automations, setAutomations] = useState<Automation[]>([])
   const [ideas, setIdeas] = useState<Idea[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
+  const [scorecard, setScorecard] = useState<any[]>([])
   const [decisions, setDecisions] = useState<Decision[]>([])
   const [loops, setLoops] = useState<Loop[]>([])
   const [captures, setCaptures] = useState<Capture[]>([])
@@ -274,6 +275,12 @@ export default function MissionControl() {
       
       // Fetch goals
       const { data: goalsData } = await supabase
+        .from('goals')
+        .select('*')
+        .order('level')
+      
+      // Fetch scorecard
+      const { data: scorecardData } = await supabase
         .from('scorecard_weekly')
         .select('*')
         .order('week_start', { ascending: false })
@@ -319,6 +326,7 @@ export default function MissionControl() {
       if (automationsData) setAutomations(automationsData)
       if (ideasData) setIdeas(ideasData)
       if (goalsData) setGoals(goalsData)
+      if (scorecardData) setScorecard(scorecardData)
       if (decisionsData) setDecisions(decisionsData)
       if (loopsData) setLoops(loopsData)
       if (capturesData) setCaptures(capturesData)
@@ -583,7 +591,7 @@ export default function MissionControl() {
     return match ? parseFloat(match[0]) : 0
   }
 
-  const currentMRR = goalsData?.[0]?.mrr_total || 60000
+  const currentMRR = scorecard?.[0]?.mrr_total || 60000
   const targetMRR = 40000
   const currentClients = clientGoal ? extractNumber(clientGoal.current_value) : 6
   const targetClients = 10
