@@ -582,7 +582,7 @@ export default function MissionControl() {
     return match ? parseFloat(match[0]) : 0
   }
 
-  const currentMRR = mrrGoal ? extractNumber(mrrGoal.current_value) : 21666
+  const currentMRR = pipeline.filter(p => p.stage === 'HOT' || p.stage === 'FOLLOW-UP').reduce((sum, p) => sum + (p.monthly_value || 0), 0)
   const targetMRR = 40000
   const currentClients = clientGoal ? extractNumber(clientGoal.current_value) : 6
   const targetClients = 10
@@ -780,9 +780,9 @@ export default function MissionControl() {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <Lightbulb className="w-4 h-4 text-pink-500" />
-                      <span className="text-xs text-zinc-500">Vision</span>
+                      <span className="text-xs text-zinc-500">Elevate</span>
                     </div>
-                    <div className="text-2xl font-bold text-white">0<span className="text-zinc-500 text-lg">/20</span></div>
+                    <div className="text-2xl font-bold text-white">0<span className="text-zinc-500 text-lg">/30</span></div>
                     <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
                       <div className="h-full bg-pink-500 rounded-full" style={{ width: '0%' }} />
                     </div>
@@ -1203,7 +1203,7 @@ export default function MissionControl() {
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-zinc-400">👁️ Vision</span>
+                        <span className="text-zinc-400">👁️ Elevate</span>
                         <div className="flex items-center gap-2">
                           <div className="w-12 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                             <div className="h-full bg-pink-500 rounded-full" style={{ width: `${(0 / 20) * 100}%` }} />
@@ -1596,7 +1596,7 @@ export default function MissionControl() {
                       <div className="text-xs text-zinc-500">Actions</div>
                     </div>
                     <div className="text-center p-4 rounded-lg bg-zinc-900/80">
-                      <div className="text-3xl font-bold text-amber-400">6</div>
+                      <div className="text-3xl font-bold text-amber-400">40</div>
                       <div className="text-xs text-zinc-500">Automations</div>
                     </div>
                   </div>
