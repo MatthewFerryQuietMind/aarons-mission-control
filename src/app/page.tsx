@@ -240,8 +240,8 @@ export default function MissionControl() {
   
   // Derived counts from pipeline
   const coachingCount = pipeline.filter(p => p.product === '1-on-1 Coaching' && (p.stage === 'CLOSED-WON' || p.stage === 'HOT' || p.stage === 'FOLLOW-UP')).length
-  const aoiCount = pipeline.filter(p => p.product?.toLowerCase().includes('aoi')).length
-  const mjmCount = pipeline.filter(p => p.product?.toLowerCase().includes('mjm')).length
+  const aoiCount = pipeline.filter(p => p.product?.toLowerCase().includes('aoi')).reduce((sum, p) => sum + (p.monthly_value || 0), 0)
+  const mjmCount = pipeline.filter(p => p.product?.toLowerCase().includes('mjm')).reduce((sum, p) => sum + (p.monthly_value || 0), 0)
 
   // Fetch data from Supabase
   const fetchData = async () => {
