@@ -274,9 +274,10 @@ export default function MissionControl() {
       
       // Fetch goals
       const { data: goalsData } = await supabase
-        .from('goals')
+        .from('scorecard_weekly')
         .select('*')
-        .order('level')
+        .order('week_start', { ascending: false })
+        .limit(1)
       
       // Fetch decisions
       const { data: decisionsData } = await supabase
@@ -582,7 +583,7 @@ export default function MissionControl() {
     return match ? parseFloat(match[0]) : 0
   }
 
-  const currentMRR = pipeline.filter(p => p.stage === 'HOT' || p.stage === 'FOLLOW-UP').reduce((sum, p) => sum + (p.monthly_value || 0), 0)
+  const currentMRR = goalsData?.[0]?.mrr_total || 60000
   const targetMRR = 40000
   const currentClients = clientGoal ? extractNumber(clientGoal.current_value) : 6
   const targetClients = 10
