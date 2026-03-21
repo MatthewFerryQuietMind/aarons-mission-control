@@ -810,17 +810,20 @@ export default function MissionControl() {
                   <CardContent className="p-4 flex flex-col min-h-[140px]">
                     <div className="flex items-center gap-2 mb-2">
                       <DollarSign className="w-4 h-4 text-emerald-500" />
-                      <span className="text-xs text-zinc-500 font-semibold">MRR</span>
-                      {revenueLoading && <span className="text-xs text-zinc-600 ml-auto">loading...</span>}
+                      <span className="text-xs text-zinc-500 font-semibold">MRR (Coaching)</span>
                     </div>
                     <div className="text-3xl font-bold text-white mb-1 break-words">
-                      ${revenue ? Math.round(revenue.recurring_monthly / 1000) : '21'}k
+                      ${(revenue?.recurring_monthly && revenue.recurring_monthly > 0)
+                        ? Math.round(revenue.recurring_monthly / 1000)
+                        : Math.round(currentMRR / 1000)}k
                     </div>
                     <div className="text-sm text-zinc-500 mb-auto">
-                      Target: $90k
+                      Target: ${Math.round(targetMRR / 1000)}k
                     </div>
                     <div className="h-2 bg-zinc-800 rounded-full mt-3">
-                      <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: revenue ? `${Math.min((revenue.recurring_monthly / 90000) * 100, 100)}%` : '23%' }} />
+                      <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ 
+                        width: `${Math.min(((revenue?.recurring_monthly && revenue.recurring_monthly > 0 ? revenue.recurring_monthly : currentMRR) / targetMRR) * 100, 100)}%` 
+                      }} />
                     </div>
                   </CardContent>
                 </Card>
