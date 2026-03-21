@@ -591,12 +591,15 @@ export default function MissionControl() {
     return match ? parseFloat(match[0]) : 0
   }
 
-  const currentMRR = scorecard?.[0]?.mrr_total || 60000
-  const targetMRR = 40000
+  const automationGoal = quarterlyGoals.find(g => g.title.toLowerCase().includes('automat'))
+  const currentMRR = mrrGoal ? extractNumber(mrrGoal.current_value) : 21666
+  const targetMRR = mrrGoal ? extractNumber(mrrGoal.target_value) : 40000
   const currentClients = clientGoal ? extractNumber(clientGoal.current_value) : 6
-  const targetClients = 10
+  const targetClients = clientGoal ? extractNumber(clientGoal.target_value) : 10
   const currentKristenTime = kristenGoal ? extractNumber(kristenGoal.current_value) : 60
-  const targetKristenTime = 20
+  const targetKristenTime = kristenGoal ? extractNumber(kristenGoal.target_value) : 20
+  const currentAutomation = automationGoal ? extractNumber(automationGoal.current_value) : 40
+  const targetAutomation = automationGoal ? extractNumber(automationGoal.target_value) : 90
 
   // Format time
   const formatTime = (dateStr: string) => {
@@ -613,11 +616,31 @@ export default function MissionControl() {
     const date = new Date(dateStr)
     const now = new Date()
     const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-    if (diffDays === 0) return 'Today'
+    if (diffMins < 1) return 'just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
     if (diffDays === 1) return 'Yesterday'
     if (diffDays < 7) return `${diffDays} days ago`
     return formatDate(dateStr)
+  }
+
+  // Activity type styling
+  const getActivityStyle = (type: string) => {
+    const styles: Record<string, { color: string; emoji: string; bg: string }> = {
+      zoom: { color: 'text-blue-400', emoji: '🎬', bg: 'bg-blue-950/20 border-blue-800/20' },
+      email: { color: 'text-cyan-400', emoji: '📧', bg: 'bg-cyan-950/20 border-cyan-800/20' },
+      circle: { color: 'text-violet-400', emoji: '🔮', bg: 'bg-violet-950/20 border-violet-800/20' },
+      backup: { color: 'text-emerald-400', emoji: '💾', bg: 'bg-emerald-950/20 border-emerald-800/20' },
+      system: { color: 'text-zinc-400', emoji: '⚙️', bg: 'bg-zinc-800/30 border-zinc-700/30' },
+      task: { color: 'text-amber-400', emoji: '✅', bg: 'bg-amber-950/20 border-amber-800/20' },
+      task_edit: { color: 'text-amber-400', emoji: '✏️', bg: 'bg-amber-950/20 border-amber-800/20' },
+      clarification: { color: 'text-amber-300', emoji: '💬', bg: 'bg-amber-950/20 border-amber-800/20' },
+      task_priority: { color: 'text-red-400', emoji: '⚡', bg: 'bg-red-950/20 border-red-800/20' },
+    }
+    return styles[type] || { color: 'text-zinc-400', emoji: '📝', bg: 'bg-zinc-800/20 border-zinc-700/20' }
   }
 
   // Calculate pipeline stats
@@ -720,6 +743,66 @@ export default function MissionControl() {
 
             {/* ==================== COMMAND TAB (NEW DEFAULT) ==================== */}
             <TabsContent value="command" className="space-y-6">
+
+              {/* ===== SEPTEMBER GOALS STRIP ===== */}
+              <Card className="bg-zinc-900 border-zinc-800 border-t-4 border-t-cyan-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Target className="w-5 h-5 text-cyan-500" />
+                    <span className="text-sm font-semibold text-white">Am I on track for September 1?</span>
+                    <Badge className="ml-auto bg-cyan-500/20 text-cyan-400 text-xs">{daysUntilSeptember} days left</Badge>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {/* $40k MRR Coaching */}
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-zinc-400">$40k MRR Coaching</span>
+                        <span className="text-emerald-400 font-medium">${currentMRR.toLocaleString()}<span className="text-zinc-500">/$40k</span></span>
+                      </div>
+                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${Math.min((currentMRR / targetMRR) * 100, 100)}%` }} />
+                      </div>
+                      <div className="text-xs text-zinc-500 mt-1">{Math.round((currentMRR / targetMRR) * 100)}% complete</div>
+                    </div>
+                    {/* 10 Coaching Clients */}
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-zinc-400">10 Coaching Clients</span>
+                        <span className="text-cyan-400 font-medium">{currentClients}<span className="text-zinc-500">/{targetClients}</span></span>
+                      </div>
+                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-cyan-500 rounded-full transition-all" style={{ width: `${Math.min((currentClients / targetClients) * 100, 100)}%` }} />
+                      </div>
+                      <div className="text-xs text-zinc-500 mt-1">{Math.round((currentClients / targetClients) * 100)}% complete</div>
+                    </div>
+                    {/* 90% Admin Automated */}
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-zinc-400">90% Admin Automated</span>
+                        <span className="text-amber-400 font-medium">{currentAutomation}%<span className="text-zinc-500">/{targetAutomation}%</span></span>
+                      </div>
+                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${Math.min((currentAutomation / targetAutomation) * 100, 100)}%` }} />
+                      </div>
+                      <div className="text-xs text-zinc-500 mt-1">{Math.round((currentAutomation / targetAutomation) * 100)}% complete</div>
+                    </div>
+                    {/* Kristen 20% */}
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-zinc-400">Kristen → 20% MFI</span>
+                        <span className="text-violet-400 font-medium">{currentKristenTime}%<span className="text-zinc-500"> → {targetKristenTime}%</span></span>
+                      </div>
+                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        {/* Inverted: higher current% means worse, lower is better */}
+                        <div className="h-full bg-violet-500 rounded-full transition-all" 
+                             style={{ width: `${Math.min(((100 - currentKristenTime) / (100 - targetKristenTime)) * 100, 100)}%` }} />
+                      </div>
+                      <div className="text-xs text-zinc-500 mt-1">{Math.round(((100 - currentKristenTime) / (100 - targetKristenTime)) * 100)}% reduction done</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* ===== TOP PROGRESS BOXES (MRR wide, others compact) ===== */}
               <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 {/* MRR - WIDE (2 cols) */}
@@ -1146,22 +1229,24 @@ export default function MissionControl() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      {activities.slice(0, 6).map((activity) => (
-                        <div key={activity.id} className="flex items-start gap-3 p-2 rounded hover:bg-zinc-800/50">
-                          <div className="text-xs text-zinc-500 w-16 shrink-0 pt-0.5">
-                            {formatTime(activity.created_at)}
+                      {activities.slice(0, 8).map((activity) => {
+                        const style = getActivityStyle(activity.type)
+                        return (
+                          <div key={activity.id} className={`flex items-start gap-3 p-2 rounded border ${style.bg} hover:opacity-90 transition-opacity`}>
+                            <span className="text-sm shrink-0 pt-0.5">{style.emoji}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm text-white truncate">{activity.title}</div>
+                              {activity.description && (
+                                <div className="text-xs text-zinc-400 truncate">{activity.description}</div>
+                              )}
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <div className={`text-xs ${style.color}`}>{activity.type}</div>
+                              <div className="text-xs text-zinc-600">{formatRelativeTime(activity.created_at)}</div>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm text-white truncate">{activity.title}</div>
-                            {activity.description && (
-                              <div className="text-xs text-zinc-500 truncate">{activity.description}</div>
-                            )}
-                          </div>
-                          <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-500 shrink-0">
-                            {activity.type}
-                          </Badge>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </CardContent>
                 </Card>
@@ -1176,15 +1261,14 @@ export default function MissionControl() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {/* Overall Score */}
+                    {/* Overall Score — average of 4 goal completions */}
                     <div className="text-center p-3 rounded-lg bg-gradient-to-r from-cyan-950/50 to-emerald-950/50 border border-cyan-800/30">
                       <div className="text-3xl font-bold text-cyan-400">
                         {Math.round(
-                          (currentMRR / 100000) * 25 + 
-                          (coachingCount / 15) * 20 + 
-                          (0 / 20) * 20 +
-                          ((100 - currentKristenTime) / (100 - targetKristenTime)) * 20 +
-                          (6 / 300) * 15
+                          ((currentMRR / targetMRR) * 25 + 
+                          (currentClients / targetClients) * 25 + 
+                          (currentAutomation / targetAutomation) * 25 +
+                          ((100 - currentKristenTime) / (100 - targetKristenTime)) * 25)
                         )}
                         <span className="text-lg text-zinc-400">/100</span>
                       </div>
@@ -1194,48 +1278,39 @@ export default function MissionControl() {
                     {/* Breakdown */}
                     <div className="space-y-2 text-xs">
                       <div className="flex justify-between items-center">
-                        <span className="text-zinc-400">💰 Revenue</span>
+                        <span className="text-zinc-400">💰 MRR</span>
                         <div className="flex items-center gap-2">
                           <div className="w-12 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(currentMRR / 100000) * 100}%` }} />
+                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min((currentMRR / targetMRR) * 100, 100)}%` }} />
                           </div>
-                          <span className="text-zinc-300 w-12 text-right">${Math.round(currentMRR/1000)}k/$100k</span>
+                          <span className="text-zinc-300 w-16 text-right">${Math.round(currentMRR/1000)}k/$40k</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-zinc-400">🎯 1-on-1</span>
+                        <span className="text-zinc-400">🎯 Clients</span>
                         <div className="flex items-center gap-2">
                           <div className="w-12 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${(coachingCount / 15) * 100}%` }} />
+                            <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${Math.min((currentClients / targetClients) * 100, 100)}%` }} />
                           </div>
-                          <span className="text-zinc-300 w-12 text-right">{coachingCount}/15</span>
+                          <span className="text-zinc-300 w-16 text-right">{currentClients}/{targetClients}</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-zinc-400">👁️ Elevate</span>
+                        <span className="text-zinc-400">🤖 Auto</span>
                         <div className="flex items-center gap-2">
                           <div className="w-12 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-pink-500 rounded-full" style={{ width: `${(0 / 20) * 100}%` }} />
+                            <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min((currentAutomation / targetAutomation) * 100, 100)}%` }} />
                           </div>
-                          <span className="text-zinc-300 w-12 text-right">0/20</span>
+                          <span className="text-zinc-300 w-16 text-right">{currentAutomation}%/{targetAutomation}%</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-zinc-400">👩 Kristen</span>
                         <div className="flex items-center gap-2">
                           <div className="w-12 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-violet-500 rounded-full" style={{ width: `${((100 - currentKristenTime) / (100 - targetKristenTime)) * 100}%` }} />
+                            <div className="h-full bg-violet-500 rounded-full" style={{ width: `${Math.min(((100 - currentKristenTime) / (100 - targetKristenTime)) * 100, 100)}%` }} />
                           </div>
-                          <span className="text-zinc-300 w-12 text-right">{currentKristenTime}%→20%</span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center pt-1 border-t border-zinc-800">
-                        <span className="text-zinc-400">🤖 Auto</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-12 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-amber-500 rounded-full" style={{ width: `${(6 / 300) * 100}%` }} />
-                          </div>
-                          <span className="text-zinc-300 w-12 text-right">6/300</span>
+                          <span className="text-zinc-300 w-16 text-right">{currentKristenTime}%→{targetKristenTime}%</span>
                         </div>
                       </div>
                     </div>
@@ -1757,29 +1832,33 @@ export default function MissionControl() {
                 <CardContent>
                   <ScrollArea className="h-[600px] pr-4">
                     <div className="space-y-4">
-                      {activities.length > 0 ? activities.map((activity) => (
-                        <div key={activity.id} className="flex gap-4 pb-4 border-b border-zinc-800 last:border-0">
-                          <div className="text-sm text-zinc-500 w-24 shrink-0">
-                            {formatTime(activity.created_at)}
-                            <div className="text-xs">{formatDate(activity.created_at)}</div>
+                      {activities.length > 0 ? activities.map((activity) => {
+                        const style = getActivityStyle(activity.type)
+                        return (
+                          <div key={activity.id} className={`flex gap-4 pb-4 border-b border-zinc-800 last:border-0`}>
+                            <div className="shrink-0 pt-0.5 text-xl">{style.emoji}</div>
+                            <div className="text-sm text-zinc-500 w-20 shrink-0">
+                              <div>{formatRelativeTime(activity.created_at)}</div>
+                              <div className="text-xs text-zinc-600">{formatDate(activity.created_at)}</div>
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium text-zinc-200 mb-1">{activity.title}</div>
+                              {activity.description && (
+                                <div className="text-sm text-zinc-400">{activity.description}</div>
+                              )}
+                            </div>
+                            <Badge variant="outline" className={`shrink-0 ${
+                              activity.status === 'completed' 
+                                ? "border-emerald-500/30 text-emerald-400"
+                                : activity.status === 'failed'
+                                ? "border-red-500/30 text-red-400"
+                                : "border-zinc-700 text-zinc-500"
+                            }`}>
+                              <span className={style.color}>{activity.type}</span>
+                            </Badge>
                           </div>
-                          <div className="flex-1">
-                            <div className="font-medium text-zinc-200 mb-1">{activity.title}</div>
-                            {activity.description && (
-                              <div className="text-sm text-zinc-400">{activity.description}</div>
-                            )}
-                          </div>
-                          <Badge variant="outline" className={
-                            activity.status === 'completed' 
-                              ? "border-emerald-500/30 text-emerald-400"
-                              : activity.status === 'failed'
-                              ? "border-red-500/30 text-red-400"
-                              : "border-zinc-700 text-zinc-500"
-                          }>
-                            {activity.type}
-                          </Badge>
-                        </div>
-                      )) : (
+                        )
+                      }) : (
                         <p className="text-zinc-500 text-center py-8">No activity yet.</p>
                       )}
                     </div>
