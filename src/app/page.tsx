@@ -750,6 +750,48 @@ export default function MissionControl() {
             {/* ==================== COMMAND TAB (NEW DEFAULT) ==================== */}
             <TabsContent value="command" className="space-y-6">
 
+              {/* ===== THIS WEEK'S TOP 3 ===== */}
+              <Card className={`border-t-4 ${weeklyPriorities ? 'bg-zinc-900 border-zinc-800 border-t-amber-500' : 'bg-zinc-900/60 border-zinc-800/60 border-t-zinc-600'}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Target className="w-5 h-5 text-amber-500" />
+                    <span className="text-sm font-bold text-white uppercase tracking-wide">This Week&apos;s Top 3</span>
+                    {weeklyPriorities && (
+                      <Badge className="ml-auto bg-amber-500/20 text-amber-400 text-xs">
+                        Week of {new Date(weeklyPriorities.week_start + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </Badge>
+                    )}
+                  </div>
+                  {weeklyPriorities ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {weeklyPriorities.priority_1 && (
+                        <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-950/40 border border-amber-700/40">
+                          <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-sm font-bold text-black shrink-0">1</div>
+                          <div className="text-sm text-zinc-100 font-medium leading-snug">{weeklyPriorities.priority_1}</div>
+                        </div>
+                      )}
+                      {weeklyPriorities.priority_2 && (
+                        <div className="flex items-start gap-3 p-3 rounded-lg bg-zinc-800/60 border border-zinc-700/60">
+                          <div className="w-7 h-7 rounded-full bg-zinc-500 flex items-center justify-center text-sm font-bold text-white shrink-0">2</div>
+                          <div className="text-sm text-zinc-200 font-medium leading-snug">{weeklyPriorities.priority_2}</div>
+                        </div>
+                      )}
+                      {weeklyPriorities.priority_3 && (
+                        <div className="flex items-start gap-3 p-3 rounded-lg bg-zinc-800/60 border border-zinc-700/60">
+                          <div className="w-7 h-7 rounded-full bg-zinc-500 flex items-center justify-center text-sm font-bold text-white shrink-0">3</div>
+                          <div className="text-sm text-zinc-200 font-medium leading-snug">{weeklyPriorities.priority_3}</div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-3">
+                      <div className="text-sm text-zinc-400 mb-1">No priorities set for this week</div>
+                      <div className="text-xs text-zinc-600">Ask Matthew for this week&apos;s priorities (Sunday cron runs at 8pm PT)</div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* ===== SEPTEMBER GOALS STRIP ===== */}
               <Card className="bg-zinc-900 border-zinc-800 border-t-4 border-t-cyan-500">
                 <CardContent className="p-4">
