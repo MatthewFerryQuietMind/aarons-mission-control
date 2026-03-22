@@ -544,9 +544,12 @@ export default function MissionControl() {
     return m[(p || 'normal').toLowerCase()] ?? 2
   }
 
-  // "Needs Attention" - all pending/active/needs_triage tasks, sorted by priority then newest first
+  // "Needs Attention" - Matthew's pending/active/needs_triage tasks only, sorted by priority then newest first
   const needsAttentionTasks = tasks
-    .filter(t => ['pending', 'active', 'needs_triage'].includes(t.status))
+    .filter(t => 
+      ['pending', 'active', 'needs_triage'].includes(t.status) &&
+      ['matthew', 'me'].includes(assignedTo(t))
+    )
     .sort((a, b) => {
       const pa = priorityOrder(a.priority)
       const pb = priorityOrder(b.priority)
@@ -554,6 +557,16 @@ export default function MissionControl() {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
     .slice(0, 8)
+
+  // "Aaron's In Progress" - Aaron's high priority active/pending tasks
+  const aaronHighPriorityTasks = tasks
+    .filter(t =>
+      ['aaron'].includes(assignedTo(t)) &&
+      ['active', 'pending'].includes(t.status) &&
+      t.priority === 'high'
+    )
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 5)
 
   // "Needs Clarity" - tasks with needs_clarity = true and clarity_question is not null
   const needsClarityTasks = tasks
@@ -970,7 +983,7 @@ export default function MissionControl() {
 
               {/* ===== NEEDS ATTENTION + NEEDS CLARITY (side by side) ===== */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Needs Attention - Active/Pending Tasks */}
+                {/* Needs Attention - Matthew's Tasks + Aaron's In Progress */}
                 <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-red-500">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-lg">
@@ -978,64 +991,102 @@ export default function MissionControl() {
                       Needs Attention
                       {needsAttentionTasks.length > 0 && (
                         <Badge className="ml-2 bg-red-500/20 text-red-400 border-red-500/30">
-                          {tasks.filter(t => ['pending', 'active', 'needs_triage'].includes(t.status)).length}
+                          {needsAttentionTasks.length}
                         </Badge>
                       )}
                     </CardTitle>
-                    <CardDescription>Top {needsAttentionTasks.length} of {tasks.filter(t => ['pending', 'active', 'needs_triage'].includes(t.status)).length} active tasks — sorted by priority</CardDescription>
+                    <CardDescription>Your tasks + what Aaron is working on</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ScrollArea className="h-[320px]">
-                      {needsAttentionTasks.length > 0 ? (
-                        <div className="space-y-2 pr-2">
-                          {needsAttentionTasks.map((item) => (
-                            <div key={item.id} className={`flex items-start justify-between p-3 rounded-lg border ${
-                              item.priority === 'high' 
-                                ? 'bg-red-950/20 border-red-800/30'
-                                : item.status === 'needs_triage'
-                                ? 'bg-amber-950/20 border-amber-800/30'
-                                : 'bg-zinc-800/50 border-zinc-700'
-                            }`}>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-white text-sm leading-snug">{item.title}</div>
-                                <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                                  <Badge variant="outline" className={`text-xs border-zinc-600 ${
-                                    (item.assigned_to || '').toLowerCase() === 'aaron' ? 'text-cyan-400 border-cyan-700' :
-                                    (item.assigned_to || '').toLowerCase() === 'matthew' ? 'text-emerald-400 border-emerald-700' :
-                                    (item.assigned_to || '').toLowerCase() === 'quill' ? 'text-violet-400 border-violet-700' :
-                                    'text-zinc-400'
-                                  }`}>
-                                    {item.assigned_to || 'unassigned'}
-                                  </Badge>
-                                  <Badge variant="outline" className={`text-xs ${
-                                    item.status === 'active' ? 'border-blue-700 text-blue-400' :
-                                    item.status === 'pending' ? 'border-amber-700 text-amber-400' :
-                                    'border-red-700 text-red-400'
-                                  }`}>
-                                    {item.status}
-                                  </Badge>
-                                  {item.priority === 'high' && (
-                                    <Badge className="text-xs bg-red-500/20 text-red-400 border-red-500/30">high priority</Badge>
-                                  )}
-                                  {item.source && (
-                                    <span className="text-xs text-zinc-500 truncate max-w-[120px]" title={item.source}>
-                                      {item.source.length > 30 ? item.source.substring(0, 30) + '…' : item.source}
-                                    </span>
-                                  )}
+                      <div className="space-y-4 pr-2">
+                        {/* YOUR TASKS (Matthew) */}
+                        <div>
+                          <div className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                            🟢 Your Tasks
+                            <span className="text-zinc-500 font-normal normal-case">{needsAttentionTasks.length} pending</span>
+                          </div>
+                          {needsAttentionTasks.length > 0 ? (
+                            <div className="space-y-2">
+                              {needsAttentionTasks.map((item) => (
+                                <div key={item.id} className={`flex items-start justify-between p-3 rounded-lg border ${
+                                  item.priority === 'high' 
+                                    ? 'bg-red-950/20 border-red-800/30'
+                                    : item.status === 'needs_triage'
+                                    ? 'bg-amber-950/20 border-amber-800/30'
+                                    : 'bg-zinc-800/50 border-zinc-700'
+                                }`}>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-white text-sm leading-snug">{item.title}</div>
+                                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                      <Badge variant="outline" className={`text-xs ${
+                                        item.status === 'active' ? 'border-blue-700 text-blue-400' :
+                                        item.status === 'pending' ? 'border-amber-700 text-amber-400' :
+                                        'border-red-700 text-red-400'
+                                      }`}>
+                                        {item.status}
+                                      </Badge>
+                                      {item.priority === 'high' && (
+                                        <Badge className="text-xs bg-red-500/20 text-red-400 border-red-500/30">high priority</Badge>
+                                      )}
+                                      {item.source && (
+                                        <span className="text-xs text-zinc-500 truncate max-w-[120px]" title={item.source}>
+                                          {item.source.length > 30 ? item.source.substring(0, 30) + '…' : item.source}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 ml-2 shrink-0">
+                                    <Button size="sm" variant="ghost" className="text-emerald-400 hover:bg-emerald-950/50 h-7 w-7 p-0" onClick={() => updateTaskStatus(item.id, 'done')} title="Done">✅</Button>
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="flex items-center gap-1 ml-2 shrink-0">
-                                <Button size="sm" variant="ghost" className="text-emerald-400 hover:bg-emerald-950/50 h-7 w-7 p-0" onClick={() => updateTaskStatus(item.id, 'done')} title="Done">✅</Button>
-                              </div>
+                              ))}
                             </div>
-                          ))}
+                          ) : (
+                            <div className="text-center py-3 rounded-lg bg-zinc-800/30 border border-zinc-700/50">
+                              <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-1" />
+                              <div className="text-xs text-zinc-400">All clear! No tasks for you.</div>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="text-center py-6">
-                          <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
-                          <div className="text-sm text-zinc-400">All clear! No pending tasks.</div>
+
+                        {/* AARON'S IN PROGRESS */}
+                        <div>
+                          <div className="text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                            🔵 Aaron&apos;s Tasks
+                            <span className="text-zinc-500 font-normal normal-case">{aaronHighPriorityTasks.length} high priority</span>
+                          </div>
+                          {aaronHighPriorityTasks.length > 0 ? (
+                            <div className="space-y-2">
+                              {aaronHighPriorityTasks.map((item) => (
+                                <div key={item.id} className="flex items-start p-3 rounded-lg border bg-cyan-950/20 border-cyan-800/30">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-white text-sm leading-snug">{item.title}</div>
+                                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                      <Badge variant="outline" className={`text-xs ${
+                                        item.status === 'active' ? 'border-blue-700 text-blue-400' :
+                                        'border-amber-700 text-amber-400'
+                                      }`}>
+                                        {item.status}
+                                      </Badge>
+                                      <Badge className="text-xs bg-red-500/20 text-red-400 border-red-500/30">high priority</Badge>
+                                      {item.source && (
+                                        <span className="text-xs text-zinc-500 truncate max-w-[120px]" title={item.source}>
+                                          {item.source.length > 30 ? item.source.substring(0, 30) + '…' : item.source}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-3 rounded-lg bg-zinc-800/30 border border-zinc-700/50">
+                              <div className="text-xs text-zinc-400">No high-priority tasks in queue.</div>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </ScrollArea>
                   </CardContent>
                 </Card>
