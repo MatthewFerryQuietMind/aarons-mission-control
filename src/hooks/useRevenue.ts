@@ -10,6 +10,8 @@ export interface RevenueData {
   mtd_revenue?: number;
   mtd_month_name?: string;
   mtd_source?: string;
+  coaching_clients?: number;
+  elevate_clients?: number;
 }
 
 export function useRevenue() {

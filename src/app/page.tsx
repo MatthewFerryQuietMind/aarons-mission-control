@@ -239,8 +239,14 @@ export default function MissionControl() {
   const [pipeline, setPipeline] = useState<PipelineItem[]>([])
   const [weeklyPriorities, setWeeklyPriorities] = useState<WeeklyPriority | null>(null)
   
-  // Derived counts from pipeline
-  const coachingCount = pipeline.filter(p => p.product === '1-on-1 Coaching' && (p.stage === 'CLOSED-WON' || p.stage === 'HOT' || p.stage === 'FOLLOW-UP')).length
+  // Derived counts from pipeline (fallback if Keap API not available)
+  const pipelineCoachingCount = pipeline.filter(p => p.product === '1-on-1 Coaching' && (p.stage === 'CLOSED-WON' || p.stage === 'HOT' || p.stage === 'FOLLOW-UP')).length
+  // Use Keap live count when available (tag 5089 = MFI Coaching Client - Current)
+  const coachingCount = (revenue?.coaching_clients != null && revenue.coaching_clients > 0)
+    ? revenue.coaching_clients
+    : pipelineCoachingCount
+  // Elevate Intensive count from Keap (tag 10123 = Customer - Elevate Intensive - Current)
+  const elevateCount = revenue?.elevate_clients ?? 0
   const aoiCount = pipeline.filter(p => p.product?.toLowerCase().includes('aoi')).reduce((sum, p) => sum + (p.monthly_value || 0), 0)
   const mjmCount = pipeline.filter(p => p.product?.toLowerCase().includes('mjm')).reduce((sum, p) => sum + (p.monthly_value || 0), 0)
 
@@ -582,7 +588,7 @@ export default function MissionControl() {
 
   // Parse goals
   const mrrGoal = quarterlyGoals.find(g => g.title.includes('MRR') || g.title.includes('$40k'))
-  const clientGoal = quarterlyGoals.find(g => g.title.includes('Client') || g.title.includes('10'))
+  const clientGoal = quarterlyGoals.find(g => g.title.toLowerCase().includes('client') || g.title.includes('Coaching Clients'))
   const kristenGoal = quarterlyGoals.find(g => g.title.toLowerCase().includes('kristen'))
   
   // Extract numeric values from strings like "$21,666" or "60%"
@@ -764,10 +770,10 @@ export default function MissionControl() {
                       </div>
                       <div className="text-xs text-zinc-500 mt-1">{Math.round((currentMRR / targetMRR) * 100)}% complete</div>
                     </div>
-                    {/* 10 Coaching Clients */}
+                    {/* 15 Coaching Clients */}
                     <div>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-zinc-400">10 Coaching Clients</span>
+                        <span className="text-zinc-400">{clientGoal?.title ?? '15 Coaching Clients'}</span>
                         <span className="text-cyan-400 font-medium">{currentClients}<span className="text-zinc-500">/{targetClients}</span></span>
                       </div>
                       <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
@@ -879,16 +885,16 @@ export default function MissionControl() {
                   </CardContent>
                 </Card>
 
-                {/* Vision */}
+                {/* Elevate Intensive */}
                 <Card className="bg-zinc-900 border-zinc-800">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <Lightbulb className="w-4 h-4 text-pink-500" />
                       <span className="text-xs text-zinc-500">Elevate</span>
                     </div>
-                    <div className="text-2xl font-bold text-white">0<span className="text-zinc-500 text-lg">/30</span></div>
+                    <div className="text-2xl font-bold text-white">{elevateCount}<span className="text-zinc-500 text-lg">/30</span></div>
                     <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
-                      <div className="h-full bg-pink-500 rounded-full" style={{ width: '0%' }} />
+                      <div className="h-full bg-pink-500 rounded-full" style={{ width: `${(elevateCount / 30) * 100}%` }} />
                     </div>
                   </CardContent>
                 </Card>

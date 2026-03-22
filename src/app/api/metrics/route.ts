@@ -39,6 +39,35 @@ interface RevenueData {
   mtd_revenue: number;
   mtd_month_name: string;
   mtd_source: string; // 'transactions' | 'orders' | 'fallback'
+  coaching_clients: number;
+  elevate_clients: number;
+}
+
+/**
+ * Fetch count of contacts with a given Keap tag ID
+ */
+async function fetchKeapTagCount(tagId: number): Promise<number> {
+  try {
+    const response = await fetch(
+      `https://api.infusionsoft.com/crm/rest/v1/tags/${tagId}/contacts?limit=10`,
+      {
+        headers: {
+          'Authorization': `Bearer ${KEAP_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        next: { revalidate: 300 }, // cache 5 min
+      }
+    );
+    if (!response.ok) {
+      console.warn(`Keap tag ${tagId} count error:`, response.status);
+      return 0;
+    }
+    const data = await response.json();
+    return data.count ?? 0;
+  } catch (error) {
+    console.error(`Error fetching Keap tag ${tagId} count:`, error);
+    return 0;
+  }
 }
 
 /**
@@ -180,6 +209,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Fetch Keap tag counts for coaching and elevate clients
+    // Tag 5089 = "MFI Coaching Client - Current"
+    // Tag 10123 = "Customer - Elevate Intensive - Current"
+    const [coachingClients, elevateClients] = await Promise.all([
+      fetchKeapTagCount(5089),
+      fetchKeapTagCount(10123),
+    ]);
+
     // Fetch all orders for aggregate stats
     const allOrders = await fetchAllOrders(200);
     const paidOrders = allOrders.filter((o: KeapOrder) => o.status === 'PAID' || o.status === 'COMPLETE');
@@ -205,6 +242,8 @@ export async function GET(request: NextRequest) {
       mtd_revenue: mtdRevenue,
       mtd_month_name: mtdMonthName,
       mtd_source: mtdSource,
+      coaching_clients: coachingClients,
+      elevate_clients: elevateClients,
     };
 
     return NextResponse.json(result);
