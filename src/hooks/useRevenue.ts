@@ -7,6 +7,9 @@ export interface RevenueData {
   date_calculated: string;
   last_30_days: number;
   recurring_monthly: number;
+  mtd_revenue?: number;
+  mtd_month_name?: string;
+  mtd_source?: string;
 }
 
 export function useRevenue() {

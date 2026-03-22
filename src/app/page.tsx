@@ -805,24 +805,33 @@ export default function MissionControl() {
 
               {/* ===== TOP PROGRESS BOXES (MRR wide, others compact) ===== */}
               <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                {/* MRR - WIDE (2 cols) */}
+                {/* MTD Revenue - WIDE (2 cols) */}
                 <Card className="bg-zinc-900 border-zinc-800 md:col-span-2">
                   <CardContent className="p-4 flex flex-col min-h-[140px]">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-1">
                       <DollarSign className="w-4 h-4 text-emerald-500" />
-                      <span className="text-xs text-zinc-500 font-semibold">MRR (Coaching)</span>
+                      <span className="text-xs text-zinc-500 font-semibold">MTD Revenue</span>
+                    </div>
+                    <div className="text-xs text-zinc-600 mb-2">
+                      {revenue?.mtd_month_name ?? new Date().toLocaleString('default', { month: 'long' })} so far
                     </div>
                     <div className="text-3xl font-bold text-white mb-1 break-words">
-                      ${(revenue?.recurring_monthly && revenue.recurring_monthly > 0)
-                        ? Math.round(revenue.recurring_monthly / 1000)
-                        : Math.round(currentMRR / 1000)}k
+                      {revenueLoading ? (
+                        <span className="text-zinc-500 text-lg">Loading…</span>
+                      ) : (revenue?.mtd_revenue != null && revenue.mtd_revenue > 0) ? (
+                        <>$<span>{revenue.mtd_revenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span></>
+                      ) : (revenue?.recurring_monthly != null && revenue.recurring_monthly > 0) ? (
+                        <>$<span>{revenue.recurring_monthly.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span></>
+                      ) : (
+                        <span className="text-zinc-500 text-lg">—</span>
+                      )}
                     </div>
                     <div className="text-sm text-zinc-500 mb-auto">
-                      Target: ${Math.round(targetMRR / 1000)}k
+                      Goal: $90k–$120k/mo
                     </div>
                     <div className="h-2 bg-zinc-800 rounded-full mt-3">
                       <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ 
-                        width: `${Math.min(((revenue?.recurring_monthly && revenue.recurring_monthly > 0 ? revenue.recurring_monthly : currentMRR) / targetMRR) * 100, 100)}%` 
+                        width: `${Math.min((((revenue?.mtd_revenue ?? revenue?.recurring_monthly ?? 0) / 90000)) * 100, 100)}%` 
                       }} />
                     </div>
                   </CardContent>
@@ -1281,12 +1290,12 @@ export default function MissionControl() {
                     {/* Breakdown */}
                     <div className="space-y-2 text-xs">
                       <div className="flex justify-between items-center">
-                        <span className="text-zinc-400">💰 MRR</span>
+                        <span className="text-zinc-400">💰 MTD Rev</span>
                         <div className="flex items-center gap-2">
                           <div className="w-12 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min((currentMRR / targetMRR) * 100, 100)}%` }} />
+                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(((revenue?.mtd_revenue ?? revenue?.recurring_monthly ?? currentMRR) / targetMRR) * 100, 100)}%` }} />
                           </div>
-                          <span className="text-zinc-300 w-16 text-right">${Math.round(currentMRR/1000)}k/$40k</span>
+                          <span className="text-zinc-300 w-16 text-right">${Math.round((revenue?.mtd_revenue ?? revenue?.recurring_monthly ?? currentMRR)/1000)}k/$90k</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center">

@@ -1,10 +1,23 @@
-// API Route: /api/metrics/revenue
-// Fetches monthly revenue from Keap and returns clean data for dashboard
+// API Route: /api/metrics
+// Fetches month-to-date revenue from Keap and returns clean data for dashboard
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const KEAP_TOKEN = process.env.NEXT_PUBLIC_KEAP_TOKEN;
+// Support both server-side and public env vars
+const KEAP_TOKEN = process.env.KEAP_TOKEN || process.env.NEXT_PUBLIC_KEAP_TOKEN;
 const KEAP_API = 'https://api.infusionsoft.com/crm/rest/v1';
+
+interface KeapTransaction {
+  id: number;
+  amount: number;
+  collection_method?: string;
+  currency?: string;
+  transaction_date: string;
+  type?: string;
+  contact_id?: number;
+  gateway?: string;
+  errors?: string;
+}
 
 interface KeapOrder {
   id: number;
@@ -23,12 +36,96 @@ interface RevenueData {
   date_calculated: string;
   last_30_days: number;
   recurring_monthly: number;
+  mtd_revenue: number;
+  mtd_month_name: string;
+  mtd_source: string; // 'transactions' | 'orders' | 'fallback'
 }
 
 /**
- * Fetch all orders from Keap
+ * Fetch MTD transactions from Keap (most accurate for revenue)
  */
-async function fetchKeapOrders(limit = 100): Promise<KeapOrder[]> {
+async function fetchKeapTransactionsMTD(): Promise<{ success: boolean; total: number; count: number }> {
+  try {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const since = monthStart.toISOString();
+    const until = now.toISOString();
+
+    const response = await fetch(
+      `${KEAP_API}/transactions?since=${since}&until=${until}&limit=1000`,
+      {
+        headers: {
+          'Authorization': `Bearer ${KEAP_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        next: { revalidate: 300 }, // cache 5 min
+      }
+    );
+
+    if (!response.ok) {
+      console.warn('Keap transactions API error:', response.status, response.statusText);
+      return { success: false, total: 0, count: 0 };
+    }
+
+    const data = await response.json();
+    const transactions: KeapTransaction[] = data.transactions || data || [];
+
+    // Sum successful transactions (exclude refunds/errors)
+    const total = transactions.reduce((sum: number, t: KeapTransaction) => {
+      if (t.errors) return sum; // skip failed transactions
+      return sum + (t.amount || 0);
+    }, 0);
+
+    return { success: true, total: Math.round(total * 100) / 100, count: transactions.length };
+  } catch (error) {
+    console.error('Error fetching Keap transactions:', error);
+    return { success: false, total: 0, count: 0 };
+  }
+}
+
+/**
+ * Fetch MTD orders from Keap (fallback if transactions endpoint fails)
+ */
+async function fetchKeapOrdersMTD(): Promise<{ success: boolean; total: number; count: number; allOrders: KeapOrder[] }> {
+  try {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const since = monthStart.toISOString();
+
+    const response = await fetch(
+      `${KEAP_API}/orders?since=${since}&limit=200`,
+      {
+        headers: {
+          'Authorization': `Bearer ${KEAP_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        next: { revalidate: 300 },
+      }
+    );
+
+    if (!response.ok) {
+      console.warn('Keap orders API error:', response.status, response.statusText);
+      return { success: false, total: 0, count: 0, allOrders: [] };
+    }
+
+    const data = await response.json();
+    const orders: KeapOrder[] = data.orders || [];
+
+    // PAID orders only
+    const paidOrders = orders.filter((o: KeapOrder) => o.status === 'PAID' || o.status === 'COMPLETE');
+    const total = paidOrders.reduce((sum: number, o: KeapOrder) => sum + (o.total_paid || o.total || 0), 0);
+
+    return { success: true, total: Math.round(total * 100) / 100, count: paidOrders.length, allOrders: orders };
+  } catch (error) {
+    console.error('Error fetching Keap orders:', error);
+    return { success: false, total: 0, count: 0, allOrders: [] };
+  }
+}
+
+/**
+ * Fetch all-time orders for aggregate stats (limited set)
+ */
+async function fetchAllOrders(limit = 200): Promise<KeapOrder[]> {
   try {
     const response = await fetch(
       `${KEAP_API}/orders?limit=${limit}`,
@@ -37,61 +134,15 @@ async function fetchKeapOrders(limit = 100): Promise<KeapOrder[]> {
           'Authorization': `Bearer ${KEAP_TOKEN}`,
           'Content-Type': 'application/json',
         },
+        next: { revalidate: 300 },
       }
     );
-
-    if (!response.ok) {
-      console.error('Keap API error:', response.statusText);
-      return [];
-    }
-
+    if (!response.ok) return [];
     const data = await response.json();
     return data.orders || [];
-  } catch (error) {
-    console.error('Error fetching Keap orders:', error);
+  } catch {
     return [];
   }
-}
-
-/**
- * Calculate revenue metrics
- */
-function calculateMetrics(orders: KeapOrder[]): RevenueData {
-  // Filter for PAID orders only
-  const paidOrders = orders.filter((order) => order.status === 'PAID');
-  
-  // Calculate totals
-  const totalRevenue = paidOrders.reduce((sum, order) => {
-    return sum + (order.total_paid || 0);
-  }, 0);
-
-  // Calculate month-to-date (1st of current month to today)
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const monthToDate = paidOrders
-    .filter((order) => new Date(order.order_date) >= monthStart)
-    .reduce((sum, order) => sum + (order.total_paid || 0), 0);
-
-  // Calculate last 30 days (for reference, but not used in display)
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  const last30Days = paidOrders
-    .filter((order) => new Date(order.order_date) >= thirtyDaysAgo)
-    .reduce((sum, order) => sum + (order.total_paid || 0), 0);
-
-  const orderCount = paidOrders.length;
-  const avgOrder = orderCount > 0 ? totalRevenue / orderCount : 0;
-
-  return {
-    total_revenue: Math.round(totalRevenue * 100) / 100,
-    order_count: orderCount,
-    average_order: Math.round(avgOrder * 100) / 100,
-    date_calculated: new Date().toISOString(),
-    last_30_days: Math.round(last30Days * 100) / 100,
-    recurring_monthly: Math.round(monthToDate * 100) / 100, // Now returns month-to-date total
-  };
 }
 
 /**
@@ -106,12 +157,59 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const orders = await fetchKeapOrders(200);
-    const metrics = calculateMetrics(orders);
+    const now = new Date();
+    const monthNames = ['January','February','March','April','May','June',
+                        'July','August','September','October','November','December'];
+    const mtdMonthName = monthNames[now.getMonth()];
 
-    return NextResponse.json(metrics);
+    // Try transactions endpoint first (most accurate)
+    const txResult = await fetchKeapTransactionsMTD();
+
+    let mtdRevenue = 0;
+    let mtdSource = 'fallback';
+
+    if (txResult.success) {
+      mtdRevenue = txResult.total;
+      mtdSource = 'transactions';
+    } else {
+      // Fallback to orders endpoint
+      const ordersResult = await fetchKeapOrdersMTD();
+      if (ordersResult.success) {
+        mtdRevenue = ordersResult.total;
+        mtdSource = 'orders';
+      }
+    }
+
+    // Fetch all orders for aggregate stats
+    const allOrders = await fetchAllOrders(200);
+    const paidOrders = allOrders.filter((o: KeapOrder) => o.status === 'PAID' || o.status === 'COMPLETE');
+    const totalRevenue = paidOrders.reduce((sum: number, o: KeapOrder) => sum + (o.total_paid || 0), 0);
+
+    // Last 30 days from orders
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const last30Days = paidOrders
+      .filter((o: KeapOrder) => new Date(o.order_date) >= thirtyDaysAgo)
+      .reduce((sum: number, o: KeapOrder) => sum + (o.total_paid || 0), 0);
+
+    const orderCount = paidOrders.length;
+    const avgOrder = orderCount > 0 ? totalRevenue / orderCount : 0;
+
+    const result: RevenueData = {
+      total_revenue: Math.round(totalRevenue * 100) / 100,
+      order_count: orderCount,
+      average_order: Math.round(avgOrder * 100) / 100,
+      date_calculated: now.toISOString(),
+      last_30_days: Math.round(last30Days * 100) / 100,
+      recurring_monthly: mtdRevenue, // kept for backward compat
+      mtd_revenue: mtdRevenue,
+      mtd_month_name: mtdMonthName,
+      mtd_source: mtdSource,
+    };
+
+    return NextResponse.json(result);
   } catch (error) {
-    console.error('Revenue API error:', error);
+    console.error('Metrics API error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch revenue data' },
       { status: 500 }
