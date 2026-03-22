@@ -210,10 +210,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch Keap tag counts for coaching and elevate clients
-    // Tag 5089 = "MFI Coaching Client - Current"
+    // Tag 10147 = "One On One Coaching Client - Current"
     // Tag 10123 = "Customer - Elevate Intensive - Current"
     const [coachingClients, elevateClients] = await Promise.all([
-      fetchKeapTagCount(5089),
+      fetchKeapTagCount(10147),
       fetchKeapTagCount(10123),
     ]);
 
