@@ -38,6 +38,7 @@ interface Task {
   type: string
   status: string
   urgency: string
+  priority: string
   assigned_to: string
   due_date: string | null
   estimated_minutes: number | null
@@ -513,10 +514,13 @@ export default function MissionControl() {
   const now = new Date()
   const twoDaysFromNow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000)
   
+  // Helper: normalize assigned_to for case-insensitive comparison
+  const assignedTo = (t: Task) => (t.assigned_to || '').toLowerCase()
+  
   // Tasks that need Matthew's attention NOW
   const awaitingMatthew = tasks.filter(t => {
     // Must be assigned to Matthew and not done
-    if (t.assigned_to !== 'matthew') return false
+    if (assignedTo(t) !== 'matthew') return false
     if (t.status === 'done' || t.status === 'killed' || t.status === 'someday') return false
     
     // Always show urgent items
@@ -533,33 +537,55 @@ export default function MissionControl() {
     
     return false
   })
+
+  // Priority sort helper: high > medium > low > normal
+  const priorityOrder = (p: string) => {
+    const m: Record<string, number> = { high: 0, medium: 1, normal: 2, low: 3 }
+    return m[(p || 'normal').toLowerCase()] ?? 2
+  }
+
+  // "Needs Attention" - all pending/active/needs_triage tasks, sorted by priority then newest first
+  const needsAttentionTasks = tasks
+    .filter(t => ['pending', 'active', 'needs_triage'].includes(t.status))
+    .sort((a, b) => {
+      const pa = priorityOrder(a.priority)
+      const pb = priorityOrder(b.priority)
+      if (pa !== pb) return pa - pb
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+    .slice(0, 8)
+
+  // "Needs Clarity" - tasks with needs_clarity = true and clarity_question is not null
+  const needsClarityTasks = tasks
+    .filter(t => t.needs_clarity && t.clarity_question != null)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   
   // All active tasks for Matthew
   const allActiveForMatthew = tasks.filter(t => 
-    t.assigned_to === 'matthew' && 
+    assignedTo(t) === 'matthew' && 
     !['done', 'killed'].includes(t.status)
   )
   
   // Aaron's tasks by status
   const aaronTasks = tasks.filter(t => 
-    t.assigned_to === 'aaron' && 
+    assignedTo(t) === 'aaron' && 
     !['done', 'killed'].includes(t.status)
   )
   const aaronQueue = tasks.filter(t => 
-    t.assigned_to === 'aaron' && 
+    assignedTo(t) === 'aaron' && 
     ['pending', 'active'].includes(t.status) &&
     t.status !== 'in_progress' && t.status !== 'needs_input'
   )
   const aaronInProgress = tasks.filter(t => 
-    t.assigned_to === 'aaron' && 
+    assignedTo(t) === 'aaron' && 
     t.status === 'in_progress'
   )
   const aaronNeedsMatthew = tasks.filter(t => 
-    t.assigned_to === 'aaron' && 
+    assignedTo(t) === 'aaron' && 
     (t.status === 'needs_input' || t.needs_clarity)
   )
   const aaronCompleted = tasks.filter(t => 
-    t.assigned_to === 'aaron' && 
+    assignedTo(t) === 'aaron' && 
     t.status === 'done'
   ).sort((a, b) => new Date(b.completed_at || b.updated_at).getTime() - new Date(a.completed_at || a.updated_at).getTime())
   
@@ -574,7 +600,7 @@ export default function MissionControl() {
     return completedDate >= weekAgo
   })
   
-  // Tasks needing clarity
+  // Tasks needing clarity (all, for backwards compat in Needs Clarity section)
   const needsClarity = tasks.filter(t => t.needs_clarity)
 
   // Get goals by level
@@ -944,72 +970,73 @@ export default function MissionControl() {
 
               {/* ===== NEEDS ATTENTION + NEEDS CLARITY (side by side) ===== */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Needs Attention (Urgent Tasks First) */}
+                {/* Needs Attention - Active/Pending Tasks */}
                 <Card className="bg-zinc-900 border-zinc-800 border-l-4 border-l-red-500">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <AlertCircle className="w-5 h-5 text-red-500" />
                       Needs Attention
-                      {(tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed', 'someday'].includes(t.status)).length + awaitingMatthew.length) > 0 && (
+                      {needsAttentionTasks.length > 0 && (
                         <Badge className="ml-2 bg-red-500/20 text-red-400 border-red-500/30">
-                          {tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed', 'someday'].includes(t.status)).length + awaitingMatthew.filter(t => t.urgency !== 'urgent').length}
+                          {tasks.filter(t => ['pending', 'active', 'needs_triage'].includes(t.status)).length}
                         </Badge>
                       )}
                     </CardTitle>
+                    <CardDescription>Top {needsAttentionTasks.length} of {tasks.filter(t => ['pending', 'active', 'needs_triage'].includes(t.status)).length} active tasks — sorted by priority</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {/* PART 1: Urgent Tasks from Task List */}
-                    {tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed', 'someday'].includes(t.status)).length > 0 && (
-                      <div className="mb-4">
-                        <div className="text-xs text-red-400 font-semibold mb-2 uppercase tracking-wide">🔴 Urgent Tasks</div>
-                        <div className="space-y-2">
-                          {tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed', 'someday'].includes(t.status)).map((item) => (
-                            <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-red-950/30 border border-red-800/30">
-                              <div className="flex-1">
-                                <div className="font-medium text-white text-sm">{item.title}</div>
-                                {item.due_date && (
-                                  <div className="text-xs text-red-400 mt-1">Due: {new Date(item.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                                )}
+                    <ScrollArea className="h-[320px]">
+                      {needsAttentionTasks.length > 0 ? (
+                        <div className="space-y-2 pr-2">
+                          {needsAttentionTasks.map((item) => (
+                            <div key={item.id} className={`flex items-start justify-between p-3 rounded-lg border ${
+                              item.priority === 'high' 
+                                ? 'bg-red-950/20 border-red-800/30'
+                                : item.status === 'needs_triage'
+                                ? 'bg-amber-950/20 border-amber-800/30'
+                                : 'bg-zinc-800/50 border-zinc-700'
+                            }`}>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-white text-sm leading-snug">{item.title}</div>
+                                <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                  <Badge variant="outline" className={`text-xs border-zinc-600 ${
+                                    (item.assigned_to || '').toLowerCase() === 'aaron' ? 'text-cyan-400 border-cyan-700' :
+                                    (item.assigned_to || '').toLowerCase() === 'matthew' ? 'text-emerald-400 border-emerald-700' :
+                                    (item.assigned_to || '').toLowerCase() === 'quill' ? 'text-violet-400 border-violet-700' :
+                                    'text-zinc-400'
+                                  }`}>
+                                    {item.assigned_to || 'unassigned'}
+                                  </Badge>
+                                  <Badge variant="outline" className={`text-xs ${
+                                    item.status === 'active' ? 'border-blue-700 text-blue-400' :
+                                    item.status === 'pending' ? 'border-amber-700 text-amber-400' :
+                                    'border-red-700 text-red-400'
+                                  }`}>
+                                    {item.status}
+                                  </Badge>
+                                  {item.priority === 'high' && (
+                                    <Badge className="text-xs bg-red-500/20 text-red-400 border-red-500/30">high priority</Badge>
+                                  )}
+                                  {item.source && (
+                                    <span className="text-xs text-zinc-500 truncate max-w-[120px]" title={item.source}>
+                                      {item.source.length > 30 ? item.source.substring(0, 30) + '…' : item.source}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1 ml-2">
+                              <div className="flex items-center gap-1 ml-2 shrink-0">
                                 <Button size="sm" variant="ghost" className="text-emerald-400 hover:bg-emerald-950/50 h-7 w-7 p-0" onClick={() => updateTaskStatus(item.id, 'done')} title="Done">✅</Button>
-                                <Button size="sm" variant="ghost" className="text-amber-400 hover:bg-amber-950/50 h-7 w-7 p-0" onClick={() => updateTaskStatus(item.id, 'scheduled')} title="Schedule">📅</Button>
                               </div>
                             </div>
                           ))}
                         </div>
-                      </div>
-                    )}
-
-                    {/* PART 2: Strategic Items (Mike D, Vulcan 7, etc) */}
-                    {awaitingMatthew.filter(t => t.urgency !== 'urgent').length > 0 && (
-                      <div>
-                        <div className="text-xs text-zinc-400 font-semibold mb-2 uppercase tracking-wide">📌 Strategic Items</div>
-                        <div className="space-y-2">
-                          {awaitingMatthew.filter(t => t.urgency !== 'urgent').map((item) => (
-                            <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
-                              <div className="flex-1">
-                                <div className="font-medium text-white text-sm">{item.title}</div>
-                                {item.description && <div className="text-xs text-zinc-400 mt-1">{item.description}</div>}
-                              </div>
-                              <div className="flex items-center gap-1 ml-2">
-                                <Badge variant="outline" className="border-zinc-600 text-zinc-400 text-xs">{item.urgency}</Badge>
-                                <Button size="sm" variant="ghost" className="text-emerald-400 hover:bg-emerald-950/50 h-7 w-7 p-0" onClick={() => updateTaskStatus(item.id, 'done')} title="Done">✅</Button>
-                              </div>
-                            </div>
-                          ))}
+                      ) : (
+                        <div className="text-center py-6">
+                          <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+                          <div className="text-sm text-zinc-400">All clear! No pending tasks.</div>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Empty State */}
-                    {tasks.filter(t => t.urgency === 'urgent' && !['done', 'killed', 'someday'].includes(t.status)).length === 0 && 
-                     awaitingMatthew.filter(t => t.urgency !== 'urgent').length === 0 && (
-                      <div className="text-center py-6">
-                        <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
-                        <div className="text-sm text-zinc-400">All clear! Nothing urgent.</div>
-                      </div>
-                    )}
+                      )}
+                    </ScrollArea>
                   </CardContent>
                 </Card>
 
@@ -1019,19 +1046,19 @@ export default function MissionControl() {
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <AlertCircle className="w-5 h-5 text-amber-500" />
                       Needs Clarity
-                      {needsClarity.length > 0 && (
+                      {needsClarityTasks.length > 0 && (
                         <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">
-                          {needsClarity.length}
+                          {needsClarityTasks.length}
                         </Badge>
                       )}
                     </CardTitle>
                     <CardDescription>Items Aaron couldn&apos;t fully categorize — quick answers needed</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ScrollArea className="h-[280px]">
-                      {needsClarity.length > 0 ? (
+                    <ScrollArea className="h-[320px]">
+                      {needsClarityTasks.length > 0 ? (
                         <div className="space-y-4 pr-2">
-                          {needsClarity.map((item) => (
+                          {needsClarityTasks.map((item) => (
                             <div key={item.id} className="p-4 rounded-lg bg-amber-950/20 border border-amber-800/30">
                               <div className="font-medium text-white mb-2 text-sm">{item.title}</div>
                               {item.clarity_question && (
@@ -1387,15 +1414,15 @@ export default function MissionControl() {
                   <CardTitle className="flex items-center gap-2 text-lg">
                     ⚡ Do Now
                     <Badge className="ml-2 bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                      {tasks.filter(t => t.urgency === 'urgent' && t.assigned_to === 'matthew' && !['done', 'killed', 'someday'].includes(t.status)).length}
+                      {tasks.filter(t => t.urgency === 'urgent' && assignedTo(t) === 'matthew' && !['done', 'killed', 'someday'].includes(t.status)).length}
                     </Badge>
                   </CardTitle>
                   <CardDescription>Your top priorities — click task to edit, buttons to act</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {tasks.filter(t => t.urgency === 'urgent' && t.assigned_to === 'matthew' && !['done', 'killed', 'someday'].includes(t.status)).length > 0 ? (
-                      tasks.filter(t => t.urgency === 'urgent' && t.assigned_to === 'matthew' && !['done', 'killed', 'someday'].includes(t.status)).map((task, idx) => (
+                    {tasks.filter(t => t.urgency === 'urgent' && assignedTo(t) === 'matthew' && !['done', 'killed', 'someday'].includes(t.status)).length > 0 ? (
+                      tasks.filter(t => t.urgency === 'urgent' && assignedTo(t) === 'matthew' && !['done', 'killed', 'someday'].includes(t.status)).map((task, idx) => (
                         <div key={task.id} className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-800/30">
                           {editingTask === task.id ? (
                             /* EDITING MODE */
@@ -1470,7 +1497,7 @@ export default function MissionControl() {
                 <CardContent>
                   <ScrollArea className="h-[400px]">
                     <div className="space-y-2 pr-2">
-                      {tasks.filter(t => !['done', 'killed'].includes(t.status) && !(t.urgency === 'urgent' && t.assigned_to === 'matthew')).map(task => (
+                      {tasks.filter(t => !['done', 'killed'].includes(t.status) && !(t.urgency === 'urgent' && assignedTo(t) === 'matthew')).map(task => (
                         <div key={task.id} className="p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors">
                           {editingTask === task.id ? (
                             /* EDITING MODE */
