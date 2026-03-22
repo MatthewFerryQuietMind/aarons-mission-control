@@ -113,7 +113,8 @@ async function fetchKeapTransactionsMTD(): Promise<{ success: boolean; total: nu
 }
 
 /**
- * Fetch MTD orders from Keap (fallback if transactions endpoint fails)
+ * Fetch MTD orders from Keap (primary revenue source)
+ * Excludes DRAFT orders; sums `total` field for all other statuses (PAID, COMPLETE, etc.)
  */
 async function fetchKeapOrdersMTD(): Promise<{ success: boolean; total: number; count: number; allOrders: KeapOrder[] }> {
   try {
@@ -122,7 +123,7 @@ async function fetchKeapOrdersMTD(): Promise<{ success: boolean; total: number; 
     const since = monthStart.toISOString();
 
     const response = await fetch(
-      `${KEAP_API}/orders?since=${since}&limit=200`,
+      `${KEAP_API}/orders?since=${since}&limit=1000`,
       {
         headers: {
           'Authorization': `Bearer ${KEAP_TOKEN}`,
@@ -140,11 +141,11 @@ async function fetchKeapOrdersMTD(): Promise<{ success: boolean; total: number; 
     const data = await response.json();
     const orders: KeapOrder[] = data.orders || [];
 
-    // PAID orders only
-    const paidOrders = orders.filter((o: KeapOrder) => o.status === 'PAID' || o.status === 'COMPLETE');
-    const total = paidOrders.reduce((sum: number, o: KeapOrder) => sum + (o.total_paid || o.total || 0), 0);
+    // Exclude DRAFT orders; sum total for all others (PAID, COMPLETE, PENDING, etc.)
+    const nonDraftOrders = orders.filter((o: KeapOrder) => o.status !== 'DRAFT');
+    const total = nonDraftOrders.reduce((sum: number, o: KeapOrder) => sum + (o.total || 0), 0);
 
-    return { success: true, total: Math.round(total * 100) / 100, count: paidOrders.length, allOrders: orders };
+    return { success: true, total: Math.round(total * 100) / 100, count: nonDraftOrders.length, allOrders: orders };
   } catch (error) {
     console.error('Error fetching Keap orders:', error);
     return { success: false, total: 0, count: 0, allOrders: [] };
@@ -191,22 +192,16 @@ export async function GET(request: NextRequest) {
                         'July','August','September','October','November','December'];
     const mtdMonthName = monthNames[now.getMonth()];
 
-    // Try transactions endpoint first (most accurate)
-    const txResult = await fetchKeapTransactionsMTD();
+    // Use orders endpoint as primary source for MTD revenue
+    // Orders endpoint is more accurate than transactions for MTD reporting
+    const ordersResult = await fetchKeapOrdersMTD();
 
     let mtdRevenue = 0;
     let mtdSource = 'fallback';
 
-    if (txResult.success) {
-      mtdRevenue = txResult.total;
-      mtdSource = 'transactions';
-    } else {
-      // Fallback to orders endpoint
-      const ordersResult = await fetchKeapOrdersMTD();
-      if (ordersResult.success) {
-        mtdRevenue = ordersResult.total;
-        mtdSource = 'orders';
-      }
+    if (ordersResult.success) {
+      mtdRevenue = ordersResult.total;
+      mtdSource = 'orders';
     }
 
     // Fetch Keap tag counts for coaching and elevate clients
