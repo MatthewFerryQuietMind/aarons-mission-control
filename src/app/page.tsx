@@ -248,8 +248,9 @@ export default function MissionControl() {
     : pipelineCoachingCount
   // Elevate Intensive count from Keap (tag 10123 = Customer - Elevate Intensive - Current)
   const elevateCount = revenue?.elevate_clients ?? 0
-  const aoiCount = pipeline.filter(p => p.product?.toLowerCase().includes('aoi')).reduce((sum, p) => sum + (p.monthly_value || 0), 0)
-  const mjmCount = pipeline.filter(p => p.product?.toLowerCase().includes('mjm')).reduce((sum, p) => sum + (p.monthly_value || 0), 0)
+  // AOI and MJM counts from Keap live tags
+  const aoiCount = revenue?.aoi_members ?? pipeline.filter(p => p.product?.toLowerCase().includes('aoi')).reduce((sum, p) => sum + (p.monthly_value || 0), 0)
+  const mjmCount = revenue?.mjm_members ?? pipeline.filter(p => p.product?.toLowerCase().includes('mjm')).reduce((sum, p) => sum + (p.monthly_value || 0), 0)
 
   // Fetch data from Supabase
   const fetchData = async () => {

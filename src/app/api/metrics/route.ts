@@ -41,6 +41,8 @@ interface RevenueData {
   mtd_source: string; // 'transactions' | 'orders' | 'fallback'
   coaching_clients: number;
   elevate_clients: number;
+  mjm_members: number;
+  aoi_members: number;
 }
 
 /**
@@ -207,10 +209,14 @@ export async function GET(request: NextRequest) {
     // Fetch Keap tag counts for coaching and elevate clients
     // Tag 10147 = "One On One Coaching Client - Current"
     // Tag 10123 = "Customer - Elevate Intensive - Current"
-    const [coachingClients, elevateClients] = await Promise.all([
+    const [coachingClients, elevateClients, mjmMembers, aoiCurrent, aoiFlex] = await Promise.all([
       fetchKeapTagCount(10147),
       fetchKeapTagCount(10123),
+      fetchKeapTagCount(8606),    // MJM total current members
+      fetchKeapTagCount(8984),    // AOI current members
+      fetchKeapTagCount(9310),    // AOI flex plan members
     ]);
+    const aoiMembers = aoiCurrent + aoiFlex;
 
     // Fetch all orders for aggregate stats
     const allOrders = await fetchAllOrders(200);
@@ -239,6 +245,8 @@ export async function GET(request: NextRequest) {
       mtd_source: mtdSource,
       coaching_clients: coachingClients,
       elevate_clients: elevateClients,
+      mjm_members: mjmMembers,
+      aoi_members: aoiMembers,
     };
 
     return NextResponse.json(result);
